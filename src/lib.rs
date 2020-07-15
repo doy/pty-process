@@ -1,7 +1,6 @@
-#[cfg(test)]
-mod tests {
-    #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
-    }
-}
+mod command;
+pub use command::Command;
+mod error;
+pub use error::{Error, Result};
+mod pty;
+pub use pty::Pty;
