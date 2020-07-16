@@ -3,34 +3,34 @@ use crate::error::*;
 use std::os::unix::io::{FromRawFd as _, IntoRawFd as _};
 
 pub struct Pty {
-    master: std::fs::File,
-    slave: std::path::PathBuf,
+    pt: std::fs::File,
+    ptsname: std::path::PathBuf,
 }
 
 impl Pty {
     pub fn new() -> Result<Self> {
-        let master = nix::pty::posix_openpt(
+        let pt = nix::pty::posix_openpt(
             nix::fcntl::OFlag::O_RDWR | nix::fcntl::OFlag::O_NOCTTY,
         )?;
-        nix::pty::grantpt(&master)?;
-        nix::pty::unlockpt(&master)?;
+        nix::pty::grantpt(&pt)?;
+        nix::pty::unlockpt(&pt)?;
 
-        let slave = nix::pty::ptsname_r(&master)?.into();
+        let ptsname = nix::pty::ptsname_r(&pt)?.into();
 
-        let master_fd = master.into_raw_fd();
-        let master = unsafe { std::fs::File::from_raw_fd(master_fd) };
+        let pt_fd = pt.into_raw_fd();
+        let pt = unsafe { std::fs::File::from_raw_fd(pt_fd) };
 
-        Ok(Self { master, slave })
+        Ok(Self { pt, ptsname })
     }
 
-    pub fn master(&self) -> &std::fs::File {
-        &self.master
+    pub fn pt(&self) -> &std::fs::File {
+        &self.pt
     }
 
-    pub fn slave(&self) -> Result<std::fs::File> {
+    pub fn pts(&self) -> Result<std::fs::File> {
         Ok(std::fs::OpenOptions::new()
             .read(true)
             .write(true)
-            .open(&self.slave)?)
+            .open(&self.ptsname)?)
     }
 }

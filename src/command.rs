@@ -6,26 +6,26 @@ use std::os::unix::process::CommandExt as _;
 pub struct Command {
     pty: crate::pty::Pty,
     command: std::process::Command,
-    slave_fh: Option<std::fs::File>,
+    pts_fh: Option<std::fs::File>,
 }
 
 impl Command {
     pub fn new<S: AsRef<std::ffi::OsStr>>(program: S) -> Result<Self> {
         let pty = crate::pty::Pty::new()?;
-        let master_fd = pty.master().as_raw_fd();
-        let slave_fh = pty.slave()?;
-        let slave_fd = slave_fh.as_raw_fd();
+        let pt_fd = pty.pt().as_raw_fd();
+        let pts_fh = pty.pts()?;
+        let pts_fd = pts_fh.as_raw_fd();
         let mut command = std::process::Command::new(program);
         command
-            .stdin(unsafe { std::process::Stdio::from_raw_fd(slave_fd) })
-            .stdout(unsafe { std::process::Stdio::from_raw_fd(slave_fd) })
-            .stderr(unsafe { std::process::Stdio::from_raw_fd(slave_fd) });
+            .stdin(unsafe { std::process::Stdio::from_raw_fd(pts_fd) })
+            .stdout(unsafe { std::process::Stdio::from_raw_fd(pts_fd) })
+            .stderr(unsafe { std::process::Stdio::from_raw_fd(pts_fd) });
         unsafe {
             command.pre_exec(move || {
                 // XXX unwrap
-                nix::unistd::close(master_fd)
+                nix::unistd::close(pt_fd)
                     .map_err(|e| e.as_errno().unwrap())?;
-                nix::unistd::close(slave_fd)
+                nix::unistd::close(pts_fd)
                     .map_err(|e| e.as_errno().unwrap())?;
                 Ok(())
             });
@@ -33,12 +33,12 @@ impl Command {
         Ok(Self {
             pty,
             command,
-            slave_fh: Some(slave_fh),
+            pts_fh: Some(pts_fh),
         })
     }
 
     pub fn pty(&self) -> &std::fs::File {
-        self.pty.master()
+        self.pty.pt()
     }
 
     pub fn args<I, S>(&mut self, args: I) -> &mut Self
@@ -52,7 +52,7 @@ impl Command {
 
     pub fn spawn(&mut self) -> Result<std::process::Child> {
         let child = self.command.spawn()?;
-        self.slave_fh = None;
+        self.pts_fh = None;
         Ok(child)
     }
 }
