@@ -1,10 +1,13 @@
 use std::io::{Read as _, Write as _};
 use std::os::unix::io::AsRawFd as _;
 
+use pty_process::Command as _;
+
 fn main() {
-    let mut cmd = pty_process::Command::new("cat").unwrap();
-    // cmd.args(&["--color=auto"]);
-    let mut child = cmd.spawn().unwrap();
+    let mut child = std::process::Command::new("cat")
+        // .args(&["--color=auto"])
+        .spawn_pty()
+        .unwrap();
     let mut buf = [0_u8; 4096];
     let pty = child.pty().as_raw_fd();
     let stdin = std::io::stdin().as_raw_fd();
