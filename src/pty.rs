@@ -1,8 +1,10 @@
 use crate::error::*;
 
+use std::os::unix::io::{FromRawFd as _, IntoRawFd as _};
+
 pub struct Pty {
-    master: nix::pty::PtyMaster,
-    slave: std::fs::File,
+    master: std::fs::File,
+    slave: std::path::PathBuf,
 }
 
 impl Pty {
@@ -13,20 +15,22 @@ impl Pty {
         nix::pty::grantpt(&master)?;
         nix::pty::unlockpt(&master)?;
 
-        let name = nix::pty::ptsname_r(&master)?;
-        let slave = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(name)?;
+        let slave = nix::pty::ptsname_r(&master)?.into();
+
+        let master_fd = master.into_raw_fd();
+        let master = unsafe { std::fs::File::from_raw_fd(master_fd) };
 
         Ok(Self { master, slave })
     }
 
-    pub fn master(&self) -> &nix::pty::PtyMaster {
+    pub fn master(&self) -> &std::fs::File {
         &self.master
     }
 
-    pub fn slave(&self) -> &std::fs::File {
-        &self.slave
+    pub fn slave(&self) -> Result<std::fs::File> {
+        Ok(std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&self.slave)?)
     }
 }

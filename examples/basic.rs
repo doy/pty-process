@@ -1,14 +1,54 @@
 use std::io::{Read as _, Write as _};
+use std::os::unix::io::AsRawFd as _;
 
 fn main() {
-    let mut cmd = pty_process::Command::new("ls").unwrap();
-    cmd.args(&["--color=auto"]);
+    let mut cmd = pty_process::Command::new("cat").unwrap();
+    // cmd.args(&["--color=auto"]);
     let mut child = cmd.spawn().unwrap();
-    let mut buf = [0_u8; 1];
+    let mut buf = [0_u8; 4096];
+    let pty = cmd.pty().as_raw_fd();
+    let stdin = std::io::stdin().as_raw_fd();
     loop {
-        cmd.pty().read_exact(&mut buf).unwrap();
-        print!("{}", buf[0] as char);
-        std::io::stdout().flush().unwrap();
+        let mut set = nix::sys::select::FdSet::new();
+        set.insert(pty);
+        set.insert(stdin);
+        match nix::sys::select::select(None, Some(&mut set), None, None, None)
+        {
+            Ok(n) => {
+                if n > 0 {
+                    if set.contains(pty) {
+                        match cmd.pty().read(&mut buf) {
+                            Ok(bytes) => {
+                                let buf = &buf[..bytes];
+                                print!(
+                                    "got {} bytes: '{}'",
+                                    bytes,
+                                    std::str::from_utf8(buf).unwrap()
+                                );
+                                std::io::stdout().flush().unwrap();
+                            }
+                            Err(e) => {
+                                eprintln!("pty read failed: {:?}", e);
+                                break;
+                            }
+                        };
+                    }
+                    if set.contains(stdin) {
+                        match std::io::stdin().read(&mut buf) {
+                            Ok(bytes) => {
+                                let buf = &buf[..bytes];
+                                cmd.pty().write_all(buf).unwrap();
+                            }
+                            Err(e) => {
+                                eprintln!("stdin read failed: {:?}", e);
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+            Err(e) => println!("select failed: {:?}", e),
+        }
     }
     child.wait().unwrap();
 }
