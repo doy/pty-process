@@ -6,6 +6,9 @@ pub enum Error {
     #[error("error opening pts at {0}")]
     OpenPts(std::path::PathBuf, #[source] std::io::Error),
 
+    #[error("error setting terminal size")]
+    SetTermSize(#[source] nix::Error),
+
     #[error("error spawning subprocess")]
     Spawn(#[source] std::io::Error),
 }

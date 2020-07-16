@@ -4,13 +4,13 @@ use std::os::unix::io::{AsRawFd as _, FromRawFd as _};
 use std::os::unix::process::CommandExt as _;
 
 pub trait Command {
-    fn spawn_pty(&mut self) -> Result<Child>;
+    fn spawn_pty(&mut self, size: Option<crate::pty::Size>) -> Result<Child>;
 }
 
 impl Command for std::process::Command {
-    fn spawn_pty(&mut self) -> Result<Child> {
+    fn spawn_pty(&mut self, size: Option<crate::pty::Size>) -> Result<Child> {
         let pty = crate::pty::Pty::new()?;
-        let pts = pty.pts()?;
+        let pts = pty.pts(size)?;
 
         let pt_fd = pty.pt().as_raw_fd();
         let pts_fd = pts.as_raw_fd();

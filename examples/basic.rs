@@ -4,9 +4,13 @@ use std::os::unix::io::AsRawFd as _;
 use pty_process::Command as _;
 
 fn main() {
-    let mut child = std::process::Command::new("cat")
-        // .args(&["--color=auto"])
-        .spawn_pty()
+    let mut child = std::process::Command::new("perl")
+        .args(&[
+            "-MTerm::ReadKey",
+            "-E",
+            "my @size = GetTerminalSize; say for @size",
+        ])
+        .spawn_pty(Some(pty_process::Size::new(24, 80)))
         .unwrap();
     let mut buf = [0_u8; 4096];
     let pty = child.pty().as_raw_fd();
