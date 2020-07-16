@@ -6,7 +6,7 @@ fn main() {
     // cmd.args(&["--color=auto"]);
     let mut child = cmd.spawn().unwrap();
     let mut buf = [0_u8; 4096];
-    let pty = cmd.pty().as_raw_fd();
+    let pty = child.pty().as_raw_fd();
     let stdin = std::io::stdin().as_raw_fd();
     loop {
         let mut set = nix::sys::select::FdSet::new();
@@ -17,7 +17,7 @@ fn main() {
             Ok(n) => {
                 if n > 0 {
                     if set.contains(pty) {
-                        match cmd.pty().read(&mut buf) {
+                        match child.pty().read(&mut buf) {
                             Ok(bytes) => {
                                 let buf = &buf[..bytes];
                                 print!(
@@ -37,7 +37,7 @@ fn main() {
                         match std::io::stdin().read(&mut buf) {
                             Ok(bytes) => {
                                 let buf = &buf[..bytes];
-                                cmd.pty().write_all(buf).unwrap();
+                                child.pty().write_all(buf).unwrap();
                             }
                             Err(e) => {
                                 eprintln!("stdin read failed: {:?}", e);
