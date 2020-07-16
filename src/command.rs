@@ -30,7 +30,7 @@ impl Command for std::process::Command {
             });
         }
 
-        let child = self.spawn()?;
+        let child = self.spawn().map_err(Error::Spawn)?;
 
         Ok(Child { child, pty })
     }

@@ -11,11 +11,13 @@ impl Pty {
     pub fn new() -> Result<Self> {
         let pt = nix::pty::posix_openpt(
             nix::fcntl::OFlag::O_RDWR | nix::fcntl::OFlag::O_NOCTTY,
-        )?;
-        nix::pty::grantpt(&pt)?;
-        nix::pty::unlockpt(&pt)?;
+        )
+        .map_err(Error::CreatePty)?;
+        nix::pty::grantpt(&pt).map_err(Error::CreatePty)?;
+        nix::pty::unlockpt(&pt).map_err(Error::CreatePty)?;
 
-        let ptsname = nix::pty::ptsname_r(&pt)?.into();
+        let ptsname =
+            nix::pty::ptsname_r(&pt).map_err(Error::CreatePty)?.into();
 
         let pt_fd = pt.into_raw_fd();
         let pt = unsafe { std::fs::File::from_raw_fd(pt_fd) };
@@ -31,6 +33,7 @@ impl Pty {
         Ok(std::fs::OpenOptions::new()
             .read(true)
             .write(true)
-            .open(&self.ptsname)?)
+            .open(&self.ptsname)
+            .map_err(|e| Error::OpenPts(self.ptsname.clone(), e))?)
     }
 }
