@@ -100,15 +100,11 @@ nix::ioctl_write_ptr_bad!(
 
 fn set_term_size(file: &std::fs::File, size: &Size) -> nix::Result<()> {
     let size = size.into();
+    let fd = file.as_raw_fd();
     // safe because std::fs::File is required to contain a valid file
     // descriptor and size is guaranteed to be initialized because it's a
     // normal rust value, and nix::pty::Winsize is a repr(C) struct with the
     // same layout as `struct winsize` from sys/ioctl.h.
-    unsafe {
-        set_term_size_unsafe(
-            file.as_raw_fd(),
-            &size as *const nix::pty::Winsize,
-        )
-    }
-    .map(|_| ())
+    unsafe { set_term_size_unsafe(fd, &size as *const nix::pty::Winsize) }
+        .map(|_| ())
 }

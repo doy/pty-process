@@ -110,11 +110,10 @@ nix::ioctl_write_ptr_bad!(
     libc::c_int
 );
 
-fn set_controlling_terminal(fh: &std::fs::File) -> nix::Result<()> {
+fn set_controlling_terminal(file: &std::fs::File) -> nix::Result<()> {
+    let fd = file.as_raw_fd();
     // safe because std::fs::File is required to contain a valid file
     // descriptor
-    unsafe {
-        set_controlling_terminal_unsafe(fh.as_raw_fd(), std::ptr::null())
-    }
-    .map(|_| ())
+    unsafe { set_controlling_terminal_unsafe(fd, std::ptr::null()) }
+        .map(|_| ())
 }
