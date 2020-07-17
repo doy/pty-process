@@ -1,5 +1,6 @@
 use std::io::{Read as _, Write as _};
 use std::os::unix::io::AsRawFd as _;
+use std::os::unix::process::ExitStatusExt as _;
 
 use pty_process::Command as _;
 
@@ -34,14 +35,12 @@ impl Drop for RawGuard {
     }
 }
 
-fn main() {
-    let mut child = std::process::Command::new("sh")
-        .spawn_pty(Some(&pty_process::Size::new(24, 80)))
-        .unwrap();
+fn run(child: &pty_process::Child) {
     let _raw = RawGuard::new();
     let mut buf = [0_u8; 4096];
     let pty = child.pty().as_raw_fd();
     let stdin = std::io::stdin().as_raw_fd();
+
     loop {
         let mut set = nix::sys::select::FdSet::new();
         set.insert(pty);
@@ -60,7 +59,11 @@ fn main() {
                                 stdout.flush().unwrap();
                             }
                             Err(e) => {
-                                eprintln!("pty read failed: {:?}", e);
+                                // EIO means that the process closed the other
+                                // end of the pty
+                                if e.raw_os_error() != Some(libc::EIO) {
+                                    eprintln!("pty read failed: {:?}", e);
+                                }
                                 break;
                             }
                         };
@@ -79,8 +82,26 @@ fn main() {
                     }
                 }
             }
-            Err(e) => println!("select failed: {:?}", e),
+            Err(e) => {
+                println!("select failed: {:?}", e);
+                break;
+            }
         }
     }
-    child.wait().unwrap();
+}
+
+fn main() {
+    let mut child = std::process::Command::new("sleep")
+        .args(&["500"])
+        .spawn_pty(Some(&pty_process::Size::new(24, 80)))
+        .unwrap();
+
+    run(&child);
+
+    let status = child.wait().unwrap();
+    std::process::exit(
+        status
+            .code()
+            .unwrap_or_else(|| status.signal().unwrap_or(0) + 128),
+    );
 }
