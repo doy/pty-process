@@ -3,15 +3,42 @@ use std::os::unix::io::AsRawFd as _;
 
 use pty_process::Command as _;
 
+struct RawGuard {
+    termios: nix::sys::termios::Termios,
+}
+
+impl RawGuard {
+    fn new() -> Self {
+        let stdin = std::io::stdin().as_raw_fd();
+        let termios = nix::sys::termios::tcgetattr(stdin).unwrap();
+        let mut termios_raw = termios.clone();
+        nix::sys::termios::cfmakeraw(&mut termios_raw);
+        nix::sys::termios::tcsetattr(
+            stdin,
+            nix::sys::termios::SetArg::TCSANOW,
+            &termios_raw,
+        )
+        .unwrap();
+        Self { termios }
+    }
+}
+
+impl Drop for RawGuard {
+    fn drop(&mut self) {
+        let stdin = std::io::stdin().as_raw_fd();
+        let _ = nix::sys::termios::tcsetattr(
+            stdin,
+            nix::sys::termios::SetArg::TCSANOW,
+            &self.termios,
+        );
+    }
+}
+
 fn main() {
-    let mut child = std::process::Command::new("perl")
-        .args(&[
-            "-MTerm::ReadKey",
-            "-E",
-            "my @size = GetTerminalSize; say for @size",
-        ])
+    let mut child = std::process::Command::new("sh")
         .spawn_pty(Some(&pty_process::Size::new(24, 80)))
         .unwrap();
+    let _raw = RawGuard::new();
     let mut buf = [0_u8; 4096];
     let pty = child.pty().as_raw_fd();
     let stdin = std::io::stdin().as_raw_fd();
@@ -27,12 +54,10 @@ fn main() {
                         match child.pty().read(&mut buf) {
                             Ok(bytes) => {
                                 let buf = &buf[..bytes];
-                                print!(
-                                    "got {} bytes: '{}'",
-                                    bytes,
-                                    std::str::from_utf8(buf).unwrap()
-                                );
-                                std::io::stdout().flush().unwrap();
+                                let stdout = std::io::stdout();
+                                let mut stdout = stdout.lock();
+                                stdout.write_all(buf).unwrap();
+                                stdout.flush().unwrap();
                             }
                             Err(e) => {
                                 eprintln!("pty read failed: {:?}", e);
