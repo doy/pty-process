@@ -14,7 +14,11 @@ impl Command for std::process::Command {
         size: Option<&crate::pty::Size>,
     ) -> Result<Child> {
         let pty = crate::pty::Pty::new()?;
-        let pts = pty.pts(size)?;
+        if let Some(size) = size {
+            pty.resize(size)?;
+        }
+
+        let pts = pty.pts()?;
 
         let pt_fd = pty.pt().as_raw_fd();
         let pts_fd = pts.as_raw_fd();
@@ -73,6 +77,10 @@ pub struct Child {
 impl Child {
     pub fn pty(&self) -> &std::fs::File {
         self.pty.pt()
+    }
+
+    pub fn pty_resize(&self, size: &crate::pty::Size) -> Result<()> {
+        self.pty.resize(size)
     }
 }
 

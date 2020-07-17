@@ -78,26 +78,28 @@ impl Pty {
         &self.pt
     }
 
-    pub fn pts(&self, size: Option<&Size>) -> Result<std::fs::File> {
+    pub fn pts(&self) -> Result<std::fs::File> {
         let fh = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
             .open(&self.ptsname)
             .map_err(|e| Error::OpenPts(self.ptsname.clone(), e))?;
-        let fd = fh.as_raw_fd();
-        if let Some(size) = size {
-            let size = size.into();
-
-            // safe because fd is guaranteed to be valid here (or else the
-            // previous open call would have returned an error and exited the
-            // function early), and size is guaranteed to be initialized
-            // because it's a normal rust value, and nix::pty::Winsize is a
-            // repr(C) struct with the same layout as `struct winsize` from
-            // sys/ioctl.h.
-            unsafe { set_term_size(fd, &size as *const nix::pty::Winsize) }
-                .map_err(Error::SetTermSize)?;
-        }
         Ok(fh)
+    }
+
+    pub fn resize(&self, size: &Size) -> Result<()> {
+        let size = size.into();
+        let fd = self.pt().as_raw_fd();
+
+        // safe because fd is guaranteed to be valid here (or else the
+        // previous open call would have returned an error and exited the
+        // function early), and size is guaranteed to be initialized
+        // because it's a normal rust value, and nix::pty::Winsize is a
+        // repr(C) struct with the same layout as `struct winsize` from
+        // sys/ioctl.h.
+        unsafe { set_term_size(fd, &size as *const nix::pty::Winsize) }
+            .map_err(Error::SetTermSize)?;
+        Ok(())
     }
 }
 
