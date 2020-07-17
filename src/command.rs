@@ -35,10 +35,17 @@ impl Command for std::process::Command {
             .stdout(unsafe { std::process::Stdio::from_raw_fd(stdout) })
             .stderr(unsafe { std::process::Stdio::from_raw_fd(stderr) });
 
-        // safe because the only thing this function does is call close(),
-        // which is an async-signal-safe function
+        // XXX not entirely safe - setsid() and close() are async-signal-safe
+        // functions, but ioctl() is not, and only async-signal-safe functions
+        // are allowed to be called between fork() and exec(). other things
+        // seem to be able to get away with this though, so i'm not sure what
+        // the right answer here is?
         unsafe {
             self.pre_exec(move || {
+                nix::unistd::setsid().map_err(|e| e.as_errno().unwrap())?;
+                set_controlling_terminal(pts_fd, std::ptr::null())
+                    .map_err(|e| e.as_errno().unwrap())?;
+
                 // in the parent, destructors will handle closing these file
                 // descriptors (other than pt, used by the parent to
                 // communicate with the child) when the function ends, but in
@@ -59,6 +66,7 @@ impl Command for std::process::Command {
                     .map_err(|e| e.as_errno().unwrap())?;
                 nix::unistd::close(stderr)
                     .map_err(|e| e.as_errno().unwrap())?;
+
                 Ok(())
             });
         }
@@ -97,3 +105,9 @@ impl std::ops::DerefMut for Child {
         &mut self.child
     }
 }
+
+nix::ioctl_write_ptr_bad!(
+    set_controlling_terminal,
+    libc::TIOCSCTTY,
+    libc::c_int
+);
