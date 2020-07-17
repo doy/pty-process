@@ -35,11 +35,9 @@ impl Command for std::process::Command {
             .stdout(unsafe { std::process::Stdio::from_raw_fd(stdout) })
             .stderr(unsafe { std::process::Stdio::from_raw_fd(stderr) });
 
-        // XXX not entirely safe - setsid() and close() are async-signal-safe
-        // functions, but ioctl() is not, and only async-signal-safe functions
-        // are allowed to be called between fork() and exec(). other things
-        // seem to be able to get away with this though, so i'm not sure what
-        // the right answer here is?
+        // safe because setsid() and close() are async-signal-safe functions
+        // and ioctl() is a raw syscall (which is inherently
+        // async-signal-safe).
         unsafe {
             self.pre_exec(move || {
                 nix::unistd::setsid().map_err(|e| e.as_errno().unwrap())?;
