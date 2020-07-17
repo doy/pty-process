@@ -88,19 +88,27 @@ impl Pty {
     }
 
     pub fn resize(&self, size: &Size) -> Result<()> {
-        let size = size.into();
-        let fd = self.pt().as_raw_fd();
-
-        // safe because fd is guaranteed to be valid here (or else the
-        // previous open call would have returned an error and exited the
-        // function early), and size is guaranteed to be initialized
-        // because it's a normal rust value, and nix::pty::Winsize is a
-        // repr(C) struct with the same layout as `struct winsize` from
-        // sys/ioctl.h.
-        unsafe { set_term_size(fd, &size as *const nix::pty::Winsize) }
-            .map_err(Error::SetTermSize)?;
-        Ok(())
+        set_term_size(self.pt(), size).map_err(Error::SetTermSize)
     }
 }
 
-nix::ioctl_write_ptr_bad!(set_term_size, libc::TIOCSWINSZ, nix::pty::Winsize);
+nix::ioctl_write_ptr_bad!(
+    set_term_size_unsafe,
+    libc::TIOCSWINSZ,
+    nix::pty::Winsize
+);
+
+fn set_term_size(file: &std::fs::File, size: &Size) -> nix::Result<()> {
+    let size = size.into();
+    // safe because std::fs::File is required to contain a valid file
+    // descriptor and size is guaranteed to be initialized because it's a
+    // normal rust value, and nix::pty::Winsize is a repr(C) struct with the
+    // same layout as `struct winsize` from sys/ioctl.h.
+    unsafe {
+        set_term_size_unsafe(
+            file.as_raw_fd(),
+            &size as *const nix::pty::Winsize,
+        )
+    }
+    .map(|_| ())
+}

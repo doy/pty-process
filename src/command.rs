@@ -43,7 +43,7 @@ impl Command for std::process::Command {
         unsafe {
             self.pre_exec(move || {
                 nix::unistd::setsid().map_err(|e| e.as_errno().unwrap())?;
-                set_controlling_terminal(pts_fd, std::ptr::null())
+                set_controlling_terminal(&pts)
                     .map_err(|e| e.as_errno().unwrap())?;
 
                 // in the parent, destructors will handle closing these file
@@ -107,7 +107,16 @@ impl std::ops::DerefMut for Child {
 }
 
 nix::ioctl_write_ptr_bad!(
-    set_controlling_terminal,
+    set_controlling_terminal_unsafe,
     libc::TIOCSCTTY,
     libc::c_int
 );
+
+fn set_controlling_terminal(fh: &std::fs::File) -> nix::Result<()> {
+    // safe because std::fs::File is required to contain a valid file
+    // descriptor
+    unsafe {
+        set_controlling_terminal_unsafe(fh.as_raw_fd(), std::ptr::null())
+    }
+    .map(|_| ())
+}
