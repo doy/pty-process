@@ -63,6 +63,12 @@ impl Pty {
             nix::pty::ptsname_r(&pt).map_err(Error::CreatePty)?.into();
 
         let pt_fd = pt.into_raw_fd();
+
+        // safe because posix_openpt (or the previous functions operating on
+        // the result) would have returned an Err (causing us to return early)
+        // if the file descriptor was invalid. additionally, into_raw_fd gives
+        // up ownership over the file descriptor, allowing the newly created
+        // File object to take full ownership.
         let pt = unsafe { std::fs::File::from_raw_fd(pt_fd) };
 
         Ok(Self { pt, ptsname })
@@ -81,10 +87,15 @@ impl Pty {
         let fd = fh.as_raw_fd();
         if let Some(size) = size {
             let size = size.into();
-            unsafe {
-                set_term_size(fd, &size as *const nix::pty::Winsize)
-                    .map_err(Error::SetTermSize)?;
-            }
+
+            // safe because fd is guaranteed to be valid here (or else the
+            // previous open call would have returned an error and exited the
+            // function early), and size is guaranteed to be initialized
+            // because it's a normal rust value, and nix::pty::Winsize is a
+            // repr(C) struct with the same layout as `struct winsize` from
+            // sys/ioctl.h.
+            unsafe { set_term_size(fd, &size as *const nix::pty::Winsize) }
+                .map_err(Error::SetTermSize)?;
         }
         Ok(fh)
     }

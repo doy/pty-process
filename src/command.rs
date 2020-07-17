@@ -15,16 +15,41 @@ impl Command for std::process::Command {
         let pt_fd = pty.pt().as_raw_fd();
         let pts_fd = pts.as_raw_fd();
 
-        self.stdin(unsafe { std::process::Stdio::from_raw_fd(pts_fd) })
-            .stdout(unsafe { std::process::Stdio::from_raw_fd(pts_fd) })
-            .stderr(unsafe { std::process::Stdio::from_raw_fd(pts_fd) });
+        let stdin = nix::unistd::dup(pts_fd).map_err(Error::SpawnNix)?;
+        let stdout = nix::unistd::dup(pts_fd).map_err(Error::SpawnNix)?;
+        let stderr = nix::unistd::dup(pts_fd).map_err(Error::SpawnNix)?;
 
+        // safe because the fds are valid (otherwise pty.pts() or dup() would
+        // have returned an Err and we would have exited early) and are not
+        // owned by any other structure (since dup() returns a fresh copy of
+        // the file descriptor), allowing from_raw_fd to take ownership of it.
+        self.stdin(unsafe { std::process::Stdio::from_raw_fd(stdin) })
+            .stdout(unsafe { std::process::Stdio::from_raw_fd(stdout) })
+            .stderr(unsafe { std::process::Stdio::from_raw_fd(stderr) });
+
+        // safe because the only thing this function does is call close(),
+        // which is an async-signal-safe function
         unsafe {
             self.pre_exec(move || {
+                // in the parent, destructors will handle closing these file
+                // descriptors (other than pt, used by the parent to
+                // communicate with the child) when the function ends, but in
+                // the child, we end by calling exec(), which doesn't call
+                // destructors.
+
                 // XXX unwrap
                 nix::unistd::close(pt_fd)
                     .map_err(|e| e.as_errno().unwrap())?;
                 nix::unistd::close(pts_fd)
+                    .map_err(|e| e.as_errno().unwrap())?;
+                // at this point, stdin/stdout/stderr have already been
+                // reopened as fds 0/1/2 in the child, so we can (and should)
+                // close the originals
+                nix::unistd::close(stdin)
+                    .map_err(|e| e.as_errno().unwrap())?;
+                nix::unistd::close(stdout)
+                    .map_err(|e| e.as_errno().unwrap())?;
+                nix::unistd::close(stderr)
                     .map_err(|e| e.as_errno().unwrap())?;
                 Ok(())
             });

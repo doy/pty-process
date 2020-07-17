@@ -11,6 +11,9 @@ pub enum Error {
 
     #[error("error spawning subprocess")]
     Spawn(#[source] std::io::Error),
+
+    #[error("error spawning subprocess")]
+    SpawnNix(#[source] nix::Error),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
