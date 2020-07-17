@@ -34,8 +34,8 @@ impl Size {
     }
 }
 
-impl From<Size> for nix::pty::Winsize {
-    fn from(size: Size) -> Self {
+impl From<&Size> for nix::pty::Winsize {
+    fn from(size: &Size) -> Self {
         Self {
             ws_row: size.row,
             ws_col: size.col,
@@ -78,7 +78,7 @@ impl Pty {
         &self.pt
     }
 
-    pub fn pts(&self, size: Option<Size>) -> Result<std::fs::File> {
+    pub fn pts(&self, size: Option<&Size>) -> Result<std::fs::File> {
         let fh = std::fs::OpenOptions::new()
             .read(true)
             .write(true)

@@ -10,7 +10,7 @@ fn main() {
             "-E",
             "my @size = GetTerminalSize; say for @size",
         ])
-        .spawn_pty(Some(pty_process::Size::new(24, 80)))
+        .spawn_pty(Some(&pty_process::Size::new(24, 80)))
         .unwrap();
     let mut buf = [0_u8; 4096];
     let pty = child.pty().as_raw_fd();
