@@ -1,5 +1,5 @@
 mod command;
-pub use command::Command;
+pub use command::{Child, Command};
 mod error;
 pub use error::{Error, Result};
 mod pty;
