@@ -4,6 +4,11 @@ use ::std::os::unix::io::AsRawFd as _;
 
 mod std;
 
+#[cfg(feature = "async-process")]
+mod async_process;
+#[cfg(feature = "tokio")]
+mod tokio;
+
 pub trait Command<T> {
     fn spawn_pty(
         &mut self,
