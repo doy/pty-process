@@ -24,6 +24,8 @@ impl<T> Command for T
 where
     T: CommandImpl,
     T::Pty: crate::pty::Pty,
+    <<T as CommandImpl>::Pty as crate::pty::Pty>::Pt:
+        ::std::os::unix::io::AsRawFd,
 {
     type Child = T::Child;
     type Pty = T::Pty;
@@ -82,7 +84,7 @@ impl<C, P> Child<C, P>
 where
     P: crate::pty::Pty,
 {
-    pub fn pty(&self) -> &::std::fs::File {
+    pub fn pty(&self) -> &P::Pt {
         self.pty.pt()
     }
 

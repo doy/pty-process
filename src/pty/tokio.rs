@@ -1,13 +1,15 @@
 use crate::error::*;
 
-use std::os::unix::io::FromRawFd as _;
+use std::os::unix::io::{AsRawFd as _, FromRawFd as _};
 
 pub struct Pty {
-    pt: std::fs::File,
+    pt: tokio::fs::File,
     ptsname: std::path::PathBuf,
 }
 
 impl super::Pty for Pty {
+    type Pt = tokio::fs::File;
+
     fn new() -> Result<Self> {
         let (pt_fd, ptsname) = super::create_pt()?;
 
@@ -18,10 +20,12 @@ impl super::Pty for Pty {
         // File object to take full ownership.
         let pt = unsafe { std::fs::File::from_raw_fd(pt_fd) };
 
+        let pt = tokio::fs::File::from_std(pt);
+
         Ok(Self { pt, ptsname })
     }
 
-    fn pt(&self) -> &std::fs::File {
+    fn pt(&self) -> &Self::Pt {
         &self.pt
     }
 
@@ -32,5 +36,10 @@ impl super::Pty for Pty {
             .open(&self.ptsname)
             .map_err(|e| Error::OpenPts(self.ptsname.clone(), e))?;
         Ok(fh)
+    }
+
+    fn resize(&self, size: &super::Size) -> Result<()> {
+        super::set_term_size(self.pt().as_raw_fd(), size)
+            .map_err(Error::SetTermSize)
     }
 }

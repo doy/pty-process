@@ -1,6 +1,6 @@
 use crate::error::*;
 
-use ::std::os::unix::io::{AsRawFd as _, IntoRawFd as _};
+use ::std::os::unix::io::IntoRawFd as _;
 
 pub mod std;
 
@@ -10,14 +10,14 @@ pub mod async_io;
 pub mod tokio;
 
 pub trait Pty {
+    type Pt;
+
     fn new() -> Result<Self>
     where
         Self: Sized;
-    fn pt(&self) -> &::std::fs::File;
+    fn pt(&self) -> &Self::Pt;
     fn pts(&self) -> Result<::std::fs::File>;
-    fn resize(&self, size: &super::Size) -> Result<()> {
-        set_term_size(self.pt(), size).map_err(Error::SetTermSize)
-    }
+    fn resize(&self, size: &super::Size) -> Result<()>;
 }
 
 pub struct Size {
@@ -84,9 +84,11 @@ nix::ioctl_write_ptr_bad!(
     nix::pty::Winsize
 );
 
-fn set_term_size(file: &::std::fs::File, size: &Size) -> nix::Result<()> {
+fn set_term_size(
+    fd: ::std::os::unix::io::RawFd,
+    size: &Size,
+) -> nix::Result<()> {
     let size = size.into();
-    let fd = file.as_raw_fd();
     // safe because std::fs::File is required to contain a valid file
     // descriptor and size is guaranteed to be initialized because it's a
     // normal rust value, and nix::pty::Winsize is a repr(C) struct with the

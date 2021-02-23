@@ -1,5 +1,8 @@
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    #[error("error making pty async")]
+    AsyncPty(#[source] std::io::Error),
+
     #[error("error creating pty")]
     CreatePty(#[source] nix::Error),
 
