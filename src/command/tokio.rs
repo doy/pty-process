@@ -2,11 +2,13 @@ use crate::error::*;
 
 use std::os::unix::io::{AsRawFd as _, FromRawFd as _};
 
-impl super::Command<tokio::process::Child> for tokio::process::Command {
+impl super::Command for tokio::process::Command {
+    type Child = tokio::process::Child;
+
     fn spawn_pty(
         &mut self,
         size: Option<&crate::pty::Size>,
-    ) -> Result<super::Child<tokio::process::Child>> {
+    ) -> Result<super::Child<Self::Child>> {
         let (pty, pts, stdin, stdout, stderr) = super::setup_pty(size)?;
 
         let pt_fd = pty.pt().as_raw_fd();

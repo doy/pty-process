@@ -3,11 +3,13 @@ use crate::error::*;
 use std::os::unix::io::{AsRawFd as _, FromRawFd as _};
 use std::os::unix::process::CommandExt as _;
 
-impl super::Command<std::process::Child> for std::process::Command {
+impl super::Command for std::process::Command {
+    type Child = std::process::Child;
+
     fn spawn_pty(
         &mut self,
         size: Option<&crate::pty::Size>,
-    ) -> Result<super::Child<std::process::Child>> {
+    ) -> Result<super::Child<Self::Child>> {
         let (pty, pts, stdin, stdout, stderr) = super::setup_pty(size)?;
 
         let pt_fd = pty.pt().as_raw_fd();

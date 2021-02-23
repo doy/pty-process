@@ -9,11 +9,13 @@ mod async_process;
 #[cfg(feature = "tokio")]
 mod tokio;
 
-pub trait Command<T> {
+pub trait Command {
+    type Child;
+
     fn spawn_pty(
         &mut self,
         size: Option<&crate::pty::Size>,
-    ) -> Result<Child<T>>;
+    ) -> Result<Child<Self::Child>>;
 }
 
 pub struct Child<T> {

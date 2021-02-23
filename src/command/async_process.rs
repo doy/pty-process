@@ -3,11 +3,13 @@ use crate::error::*;
 use async_process::unix::CommandExt as _;
 use std::os::unix::io::{AsRawFd as _, FromRawFd as _};
 
-impl super::Command<async_process::Child> for async_process::Command {
+impl super::Command for async_process::Command {
+    type Child = async_process::Child;
+
     fn spawn_pty(
         &mut self,
         size: Option<&crate::pty::Size>,
-    ) -> Result<super::Child<async_process::Child>> {
+    ) -> Result<super::Child<Self::Child>> {
         let (pty, pts, stdin, stdout, stderr) = super::setup_pty(size)?;
 
         let pt_fd = pty.pt().as_raw_fd();
