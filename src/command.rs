@@ -18,6 +18,52 @@ pub trait Command {
     ) -> Result<Child<Self::Child>>;
 }
 
+impl<T> Command for T
+where
+    T: CommandImpl,
+{
+    type Child = T::Child;
+
+    fn spawn_pty(
+        &mut self,
+        size: Option<&crate::pty::Size>,
+    ) -> Result<Child<Self::Child>> {
+        let (pty, pts, stdin, stdout, stderr) = setup_pty(size)?;
+
+        let pt_fd = pty.pt().as_raw_fd();
+        let pts_fd = pts.as_raw_fd();
+
+        self.std_fds(stdin, stdout, stderr);
+        self.pre_exec_impl(move || {
+            nix::unistd::setsid().map_err(|e| e.as_errno().unwrap())?;
+            set_controlling_terminal(pts_fd)
+                .map_err(|e| e.as_errno().unwrap())?;
+
+            // in the parent, destructors will handle closing these file
+            // descriptors (other than pt, used by the parent to
+            // communicate with the child) when the function ends, but in
+            // the child, we end by calling exec(), which doesn't call
+            // destructors.
+
+            // XXX unwrap
+            nix::unistd::close(pt_fd).map_err(|e| e.as_errno().unwrap())?;
+            nix::unistd::close(pts_fd).map_err(|e| e.as_errno().unwrap())?;
+            // at this point, stdin/stdout/stderr have already been
+            // reopened as fds 0/1/2 in the child, so we can (and should)
+            // close the originals
+            nix::unistd::close(stdin).map_err(|e| e.as_errno().unwrap())?;
+            nix::unistd::close(stdout).map_err(|e| e.as_errno().unwrap())?;
+            nix::unistd::close(stderr).map_err(|e| e.as_errno().unwrap())?;
+
+            Ok(())
+        });
+
+        let child = self.spawn_impl().map_err(Error::Spawn)?;
+
+        Ok(Child { child, pty })
+    }
+}
+
 pub struct Child<T> {
     child: T,
     pty: crate::pty::Pty,
@@ -47,6 +93,22 @@ impl<T> ::std::ops::DerefMut for Child<T> {
     }
 }
 
+// XXX shouldn't be pub?
+pub trait CommandImpl {
+    type Child;
+
+    fn std_fds(
+        &mut self,
+        stdin: ::std::os::unix::io::RawFd,
+        stdout: ::std::os::unix::io::RawFd,
+        stderr: ::std::os::unix::io::RawFd,
+    );
+    fn pre_exec_impl<F>(&mut self, f: F)
+    where
+        F: FnMut() -> ::std::io::Result<()> + Send + Sync + 'static;
+    fn spawn_impl(&mut self) -> ::std::io::Result<Self::Child>;
+}
+
 fn setup_pty(
     size: Option<&crate::pty::Size>,
 ) -> Result<(
@@ -69,35 +131,6 @@ fn setup_pty(
     let stderr = nix::unistd::dup(pts_fd).map_err(Error::SpawnNix)?;
 
     Ok((pty, pts, stdin, stdout, stderr))
-}
-
-fn pre_exec(
-    pt_fd: ::std::os::unix::io::RawFd,
-    pts_fd: ::std::os::unix::io::RawFd,
-    stdin: ::std::os::unix::io::RawFd,
-    stdout: ::std::os::unix::io::RawFd,
-    stderr: ::std::os::unix::io::RawFd,
-) -> ::std::io::Result<()> {
-    nix::unistd::setsid().map_err(|e| e.as_errno().unwrap())?;
-    set_controlling_terminal(pts_fd).map_err(|e| e.as_errno().unwrap())?;
-
-    // in the parent, destructors will handle closing these file
-    // descriptors (other than pt, used by the parent to
-    // communicate with the child) when the function ends, but in
-    // the child, we end by calling exec(), which doesn't call
-    // destructors.
-
-    // XXX unwrap
-    nix::unistd::close(pt_fd).map_err(|e| e.as_errno().unwrap())?;
-    nix::unistd::close(pts_fd).map_err(|e| e.as_errno().unwrap())?;
-    // at this point, stdin/stdout/stderr have already been
-    // reopened as fds 0/1/2 in the child, so we can (and should)
-    // close the originals
-    nix::unistd::close(stdin).map_err(|e| e.as_errno().unwrap())?;
-    nix::unistd::close(stdout).map_err(|e| e.as_errno().unwrap())?;
-    nix::unistd::close(stderr).map_err(|e| e.as_errno().unwrap())?;
-
-    Ok(())
 }
 
 fn set_controlling_terminal(
