@@ -1,34 +1,38 @@
 use crate::error::*;
+use crate::pty::Pty as _;
 
 use ::std::os::unix::io::AsRawFd as _;
 
 mod std;
 
-#[cfg(feature = "async-process")]
+#[cfg(feature = "async-std")]
 mod async_process;
 #[cfg(feature = "tokio")]
 mod tokio;
 
 pub trait Command {
     type Child;
+    type Pty;
 
     fn spawn_pty(
         &mut self,
         size: Option<&crate::pty::Size>,
-    ) -> Result<Child<Self::Child>>;
+    ) -> Result<Child<Self::Child, Self::Pty>>;
 }
 
 impl<T> Command for T
 where
     T: CommandImpl,
+    T::Pty: crate::pty::Pty,
 {
     type Child = T::Child;
+    type Pty = T::Pty;
 
     fn spawn_pty(
         &mut self,
         size: Option<&crate::pty::Size>,
-    ) -> Result<Child<Self::Child>> {
-        let (pty, pts, stdin, stdout, stderr) = setup_pty(size)?;
+    ) -> Result<Child<Self::Child, Self::Pty>> {
+        let (pty, pts, stdin, stdout, stderr) = setup_pty::<Self::Pty>(size)?;
 
         let pt_fd = pty.pt().as_raw_fd();
         let pts_fd = pts.as_raw_fd();
@@ -69,12 +73,15 @@ where
     }
 }
 
-pub struct Child<T> {
-    child: T,
-    pty: crate::pty::Pty,
+pub struct Child<C, P> {
+    child: C,
+    pty: P,
 }
 
-impl<T> Child<T> {
+impl<C, P> Child<C, P>
+where
+    P: crate::pty::Pty,
+{
     pub fn pty(&self) -> &::std::fs::File {
         self.pty.pt()
     }
@@ -84,15 +91,15 @@ impl<T> Child<T> {
     }
 }
 
-impl<T> ::std::ops::Deref for Child<T> {
-    type Target = T;
+impl<C, P> ::std::ops::Deref for Child<C, P> {
+    type Target = C;
 
     fn deref(&self) -> &Self::Target {
         &self.child
     }
 }
 
-impl<T> ::std::ops::DerefMut for Child<T> {
+impl<C, P> ::std::ops::DerefMut for Child<C, P> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.child
     }
@@ -101,6 +108,7 @@ impl<T> ::std::ops::DerefMut for Child<T> {
 // XXX shouldn't be pub?
 pub trait CommandImpl {
     type Child;
+    type Pty;
 
     fn std_fds(
         &mut self,
@@ -114,16 +122,19 @@ pub trait CommandImpl {
     fn spawn_impl(&mut self) -> ::std::io::Result<Self::Child>;
 }
 
-fn setup_pty(
+fn setup_pty<P>(
     size: Option<&crate::pty::Size>,
 ) -> Result<(
-    crate::pty::Pty,
+    P,
     ::std::fs::File,
     ::std::os::unix::io::RawFd,
     ::std::os::unix::io::RawFd,
     ::std::os::unix::io::RawFd,
-)> {
-    let pty = crate::pty::Pty::new()?;
+)>
+where
+    P: crate::pty::Pty,
+{
+    let pty = P::new()?;
     if let Some(size) = size {
         pty.resize(size)?;
     }

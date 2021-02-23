@@ -2,6 +2,7 @@ use std::os::unix::io::FromRawFd as _;
 
 impl super::CommandImpl for tokio::process::Command {
     type Child = tokio::process::Child;
+    type Pty = crate::pty::tokio::Pty;
 
     fn std_fds(
         &mut self,

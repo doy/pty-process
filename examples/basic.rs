@@ -35,7 +35,7 @@ impl Drop for RawGuard {
     }
 }
 
-fn run(child: &pty_process::Child<std::process::Child>) {
+fn run(child: &pty_process::std::Child) {
     let _raw = RawGuard::new();
     let mut buf = [0_u8; 4096];
     let pty = child.pty().as_raw_fd();
