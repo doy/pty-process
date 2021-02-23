@@ -19,16 +19,11 @@ impl super::CommandImpl for std::process::Command {
             .stderr(unsafe { std::process::Stdio::from_raw_fd(stderr) });
     }
 
-    fn pre_exec_impl<F>(&mut self, f: F)
+    unsafe fn pre_exec_impl<F>(&mut self, f: F)
     where
         F: FnMut() -> ::std::io::Result<()> + Send + Sync + 'static,
     {
-        // safe because setsid() and close() are async-signal-safe functions
-        // and ioctl() is a raw syscall (which is inherently
-        // async-signal-safe).
-        unsafe {
-            self.pre_exec(f);
-        }
+        self.pre_exec(f);
     }
 
     fn spawn_impl(&mut self) -> ::std::io::Result<Self::Child> {

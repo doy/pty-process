@@ -34,7 +34,8 @@ where
         let pts_fd = pts.as_raw_fd();
 
         self.std_fds(stdin, stdout, stderr);
-        self.pre_exec_impl(move || {
+
+        let pre_exec = move || {
             nix::unistd::setsid().map_err(|e| e.as_errno().unwrap())?;
             set_controlling_terminal(pts_fd)
                 .map_err(|e| e.as_errno().unwrap())?;
@@ -56,7 +57,11 @@ where
             nix::unistd::close(stderr).map_err(|e| e.as_errno().unwrap())?;
 
             Ok(())
-        });
+        };
+        // safe because setsid() and close() are async-signal-safe functions
+        // and ioctl() is a raw syscall (which is inherently
+        // async-signal-safe).
+        unsafe { self.pre_exec_impl(pre_exec) };
 
         let child = self.spawn_impl().map_err(Error::Spawn)?;
 
@@ -103,7 +108,7 @@ pub trait CommandImpl {
         stdout: ::std::os::unix::io::RawFd,
         stderr: ::std::os::unix::io::RawFd,
     );
-    fn pre_exec_impl<F>(&mut self, f: F)
+    unsafe fn pre_exec_impl<F>(&mut self, f: F)
     where
         F: FnMut() -> ::std::io::Result<()> + Send + Sync + 'static;
     fn spawn_impl(&mut self) -> ::std::io::Result<Self::Child>;
