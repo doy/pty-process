@@ -47,7 +47,7 @@ async fn run(
         loop {
             match stdin.read(&mut buf).await {
                 Ok(bytes) => {
-                    child.pty().write(&buf[..bytes]).await.unwrap();
+                    child.pty().write_all(&buf[..bytes]).await.unwrap();
                 }
                 Err(e) => {
                     eprintln!("stdin read failed: {:?}", e);
