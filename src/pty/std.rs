@@ -27,6 +27,10 @@ impl super::Pty for Pty {
         &self.pt
     }
 
+    fn pt_mut(&mut self) -> &mut Self::Pt {
+        &mut self.pt
+    }
+
     fn pts(&self) -> Result<std::fs::File> {
         let fh = std::fs::OpenOptions::new()
             .read(true)

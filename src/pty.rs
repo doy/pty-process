@@ -16,6 +16,7 @@ pub trait Pty {
     where
         Self: Sized;
     fn pt(&self) -> &Self::Pt;
+    fn pt_mut(&mut self) -> &mut Self::Pt;
     fn pts(&self) -> Result<::std::fs::File>;
     fn resize(&self, size: &super::Size) -> Result<()>;
 }
