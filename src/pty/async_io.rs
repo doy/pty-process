@@ -20,7 +20,7 @@ impl super::Pty for Pty {
         // File object to take full ownership.
         let pt = unsafe { std::fs::File::from_raw_fd(pt_fd) };
 
-        let pt = async_io::Async::new(pt).map_err(|e| Error::AsyncPty(e))?;
+        let pt = async_io::Async::new(pt).map_err(Error::AsyncPty)?;
 
         Ok(Self { pt, ptsname })
     }
