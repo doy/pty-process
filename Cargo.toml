@@ -15,7 +15,10 @@ tokio = { version = "1.2", optional = true, features = ["fs", "process", "net"] 
 futures = { version = "0.3", optional = true }
 
 [dev-dependencies]
+async-std = { version = "*", features = ["unstable"] }
+async-executor = "*"
 smol = "*"
+tokio = { version = "1.2", features = [ "rt-multi-thread", "macros", "io-std", "io-util" ] }
 
 [features]
 default = ["backend-std"]
