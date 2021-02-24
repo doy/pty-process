@@ -4,9 +4,9 @@ use ::std::os::unix::io::IntoRawFd as _;
 
 pub mod std;
 
-#[cfg(feature = "async-std")]
+#[cfg(any(feature = "backend-async-std", feature = "backend-smol"))]
 pub mod async_io;
-#[cfg(feature = "tokio")]
+#[cfg(feature = "backend-tokio")]
 pub mod tokio;
 
 pub trait Pty {

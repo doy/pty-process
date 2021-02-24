@@ -7,7 +7,7 @@ pub use pty::{Pty, Size};
 
 pub mod std;
 
-#[cfg(feature = "async-std")]
+#[cfg(any(feature = "backend-async-std", feature = "backend-smol"))]
 pub mod async_std;
-#[cfg(feature = "tokio")]
+#[cfg(feature = "backend-tokio")]
 pub mod tokio;

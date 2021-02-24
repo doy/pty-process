@@ -17,7 +17,9 @@ tokio = { version = "1.2", optional = true, features = ["fs", "process"] }
 smol = "*"
 
 [features]
-default = ["std"]
+default = ["backend-std"]
 
-std = []
-async-std = ["async-io", "async-process"]
+backend-std = []
+backend-async-std = ["async-io", "async-process"]
+backend-smol = ["async-io", "async-process"]
+backend-tokio = ["tokio"]

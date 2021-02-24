@@ -5,9 +5,9 @@ use ::std::os::unix::io::AsRawFd as _;
 
 mod std;
 
-#[cfg(feature = "async-std")]
+#[cfg(any(feature = "backend-async-std", feature = "backend-smol"))]
 mod async_process;
-#[cfg(feature = "tokio")]
+#[cfg(feature = "backend-tokio")]
 mod tokio;
 
 pub trait Command {
