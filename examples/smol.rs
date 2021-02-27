@@ -35,7 +35,7 @@ impl Drop for RawGuard {
 }
 
 async fn run(
-    child: &pty_process::async_std::Child,
+    child: &pty_process::smol::Child,
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
     let _raw = RawGuard::new();
 
