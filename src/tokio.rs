@@ -1,2 +1,1 @@
-pub type Child =
-    crate::command::Child<tokio::process::Child, crate::pty::tokio::Pty>;
+pub type Child = crate::Child<tokio::process::Child, crate::pty::tokio::Pty>;

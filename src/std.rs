@@ -1,2 +1,1 @@
-pub type Child =
-    crate::command::Child<std::process::Child, crate::pty::std::Pty>;
+pub type Child = crate::Child<std::process::Child, crate::pty::std::Pty>;
