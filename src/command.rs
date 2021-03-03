@@ -3,10 +3,10 @@ use crate::pty::Pty as _;
 
 use ::std::os::unix::io::AsRawFd as _;
 
-mod std;
-
 #[cfg(any(feature = "backend-async-std", feature = "backend-smol"))]
 mod async_process;
+#[cfg(feature = "backend-std")]
+mod std;
 #[cfg(feature = "backend-tokio")]
 mod tokio;
 

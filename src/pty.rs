@@ -2,10 +2,10 @@ use crate::error::*;
 
 use ::std::os::unix::io::IntoRawFd as _;
 
-pub mod std;
-
 #[cfg(any(feature = "backend-async-std", feature = "backend-smol"))]
 pub mod async_io;
+#[cfg(feature = "backend-std")]
+pub mod std;
 #[cfg(feature = "backend-tokio")]
 pub mod tokio;
 
