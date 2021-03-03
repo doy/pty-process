@@ -4,39 +4,10 @@ use std::os::unix::process::ExitStatusExt as _;
 
 use pty_process::Command as _;
 
-struct RawGuard {
-    termios: nix::sys::termios::Termios,
-}
-
-impl RawGuard {
-    fn new() -> Self {
-        let stdin = std::io::stdin().as_raw_fd();
-        let termios = nix::sys::termios::tcgetattr(stdin).unwrap();
-        let mut termios_raw = termios.clone();
-        nix::sys::termios::cfmakeraw(&mut termios_raw);
-        nix::sys::termios::tcsetattr(
-            stdin,
-            nix::sys::termios::SetArg::TCSANOW,
-            &termios_raw,
-        )
-        .unwrap();
-        Self { termios }
-    }
-}
-
-impl Drop for RawGuard {
-    fn drop(&mut self) {
-        let stdin = std::io::stdin().as_raw_fd();
-        let _ = nix::sys::termios::tcsetattr(
-            stdin,
-            nix::sys::termios::SetArg::TCSANOW,
-            &self.termios,
-        );
-    }
-}
+mod raw_guard;
 
 fn run(child: &pty_process::std::Child) {
-    let _raw = RawGuard::new();
+    let _raw = raw_guard::RawGuard::new();
     let mut buf = [0_u8; 4096];
     let pty = child.pty().as_raw_fd();
     let stdin = std::io::stdin().as_raw_fd();

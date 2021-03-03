@@ -1,43 +1,13 @@
 use pty_process::Command as _;
-use std::os::unix::io::AsRawFd as _;
 use std::os::unix::process::ExitStatusExt as _;
 use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
-struct RawGuard {
-    termios: nix::sys::termios::Termios,
-}
-
-impl RawGuard {
-    fn new() -> Self {
-        let stdin = std::io::stdin().as_raw_fd();
-        let termios = nix::sys::termios::tcgetattr(stdin).unwrap();
-        let mut termios_raw = termios.clone();
-        nix::sys::termios::cfmakeraw(&mut termios_raw);
-        nix::sys::termios::tcsetattr(
-            stdin,
-            nix::sys::termios::SetArg::TCSANOW,
-            &termios_raw,
-        )
-        .unwrap();
-        Self { termios }
-    }
-}
-
-impl Drop for RawGuard {
-    fn drop(&mut self) {
-        let stdin = std::io::stdin().as_raw_fd();
-        let _ = nix::sys::termios::tcsetattr(
-            stdin,
-            nix::sys::termios::SetArg::TCSANOW,
-            &self.termios,
-        );
-    }
-}
+mod raw_guard;
 
 async fn run(
     child: &mut pty_process::tokio::Child,
 ) -> std::result::Result<(), Box<dyn std::error::Error>> {
-    let _raw = RawGuard::new();
+    let _raw = raw_guard::RawGuard::new();
 
     let mut in_buf = [0_u8; 4096];
     let mut out_buf = [0_u8; 4096];
