@@ -10,7 +10,7 @@ pub enum Error {
     CreatePty(#[source] nix::Error),
 
     #[error("error opening pts at {0}")]
-    OpenPts(std::path::PathBuf, #[source] std::io::Error),
+    OpenPts(#[source] std::io::Error, std::path::PathBuf),
 
     #[error("error setting terminal size")]
     SetTermSize(#[source] nix::Error),

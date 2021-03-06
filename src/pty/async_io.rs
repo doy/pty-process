@@ -38,7 +38,7 @@ impl super::Pty for Pty {
             .read(true)
             .write(true)
             .open(&self.ptsname)
-            .map_err(|e| Error::OpenPts(self.ptsname.clone(), e))?;
+            .map_err(|e| Error::OpenPts(e, self.ptsname.clone()))?;
         Ok(fh)
     }
 
