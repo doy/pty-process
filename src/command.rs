@@ -92,7 +92,7 @@ where
         self.pty.pt_mut()
     }
 
-    pub fn pty_resize(&self, size: &crate::pty::Size) -> Result<()> {
+    pub fn resize_pty(&self, size: &crate::pty::Size) -> Result<()> {
         self.pty.resize(size)
     }
 }
