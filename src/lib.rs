@@ -22,7 +22,7 @@
 //!
 //! ```no_run
 //! # use pty_process::Command as _;
-//! # 
+//! #
 //! # let mut cmd = std::process::Command::new("nethack");
 //! # let mut child = cmd
 //! #   .spawn_pty(Some(&pty_process::Size::new(24, 80))).unwrap();
