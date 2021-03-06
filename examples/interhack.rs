@@ -1,89 +1,98 @@
-use pty_process::Command as _;
-use smol::io::{AsyncReadExt as _, AsyncWriteExt as _};
-use std::os::unix::process::ExitStatusExt as _;
-
 mod raw_guard;
 
-async fn run(
-    child: &pty_process::smol::Child,
-) -> std::result::Result<(), Box<dyn std::error::Error>> {
-    let _raw = raw_guard::RawGuard::new();
+#[cfg(feature = "backend-smol")]
+mod main {
+    use smol::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
-    let ex = smol::Executor::new();
+    pub async fn run(
+        child: &pty_process::smol::Child,
+    ) -> std::result::Result<(), Box<dyn std::error::Error>> {
+        let _raw = super::raw_guard::RawGuard::new();
 
-    let input = ex.spawn(async {
-        let mut buf = [0_u8; 4096];
-        let mut stdin = smol::Unblock::new(std::io::stdin());
-        loop {
-            match stdin.read(&mut buf).await {
-                Ok(bytes) => {
-                    // engrave Elbereth with ^E
-                    if buf[..bytes].contains(&5u8) {
-                        for byte in buf[..bytes].iter() {
-                            match byte {
-                                5u8 => child
-                                    .pty()
-                                    .write_all(b"E-  Elbereth\n")
-                                    .await
-                                    .unwrap(),
-                                _ => child
-                                    .pty()
-                                    .write_all(&[*byte])
-                                    .await
-                                    .unwrap(),
+        let ex = smol::Executor::new();
+
+        let input = ex.spawn(async {
+            let mut buf = [0_u8; 4096];
+            let mut stdin = smol::Unblock::new(std::io::stdin());
+            loop {
+                match stdin.read(&mut buf).await {
+                    Ok(bytes) => {
+                        // engrave Elbereth with ^E
+                        if buf[..bytes].contains(&5u8) {
+                            for byte in buf[..bytes].iter() {
+                                match byte {
+                                    5u8 => child
+                                        .pty()
+                                        .write_all(b"E-  Elbereth\n")
+                                        .await
+                                        .unwrap(),
+                                    _ => child
+                                        .pty()
+                                        .write_all(&[*byte])
+                                        .await
+                                        .unwrap(),
+                                }
                             }
+                        } else {
+                            child
+                                .pty()
+                                .write_all(&buf[..bytes])
+                                .await
+                                .unwrap();
                         }
-                    } else {
-                        child.pty().write_all(&buf[..bytes]).await.unwrap();
                     }
-                }
-                Err(e) => {
-                    eprintln!("stdin read failed: {:?}", e);
-                    break;
+                    Err(e) => {
+                        eprintln!("stdin read failed: {:?}", e);
+                        break;
+                    }
                 }
             }
-        }
-    });
-    let output = ex.spawn(async {
-        let mut buf = [0_u8; 4096];
-        let mut stdout = smol::Unblock::new(std::io::stdout());
-        #[allow(clippy::trivial_regex)]
-        let re = regex::bytes::Regex::new("Elbereth").unwrap();
-        loop {
-            match child.pty().read(&mut buf).await {
-                Ok(bytes) => {
-                    // highlight successful Elbereths
-                    if re.is_match(&buf[..bytes]) {
-                        stdout
-                            .write_all(&re.replace_all(
-                                &buf[..bytes],
-                                &b"\x1b[35m$0\x1b[m"[..],
-                            ))
-                            .await
-                            .unwrap();
-                    } else {
-                        stdout.write_all(&buf[..bytes]).await.unwrap();
+        });
+        let output = ex.spawn(async {
+            let mut buf = [0_u8; 4096];
+            let mut stdout = smol::Unblock::new(std::io::stdout());
+            #[allow(clippy::trivial_regex)]
+            let re = regex::bytes::Regex::new("Elbereth").unwrap();
+            loop {
+                match child.pty().read(&mut buf).await {
+                    Ok(bytes) => {
+                        // highlight successful Elbereths
+                        if re.is_match(&buf[..bytes]) {
+                            stdout
+                                .write_all(&re.replace_all(
+                                    &buf[..bytes],
+                                    &b"\x1b[35m$0\x1b[m"[..],
+                                ))
+                                .await
+                                .unwrap();
+                        } else {
+                            stdout.write_all(&buf[..bytes]).await.unwrap();
+                        }
+                        stdout.flush().await.unwrap();
                     }
-                    stdout.flush().await.unwrap();
-                }
-                Err(e) => {
-                    // EIO means that the process closed the other
-                    // end of the pty
-                    if e.raw_os_error() != Some(libc::EIO) {
-                        eprintln!("pty read failed: {:?}", e);
+                    Err(e) => {
+                        // EIO means that the process closed the other
+                        // end of the pty
+                        if e.raw_os_error() != Some(libc::EIO) {
+                            eprintln!("pty read failed: {:?}", e);
+                        }
+                        break;
                     }
-                    break;
                 }
             }
-        }
-    });
+        });
 
-    ex.run(smol::future::or(input, output)).await;
+        ex.run(smol::future::or(input, output)).await;
 
-    Ok(())
+        Ok(())
+    }
 }
 
+#[cfg(feature = "backend-smol")]
 fn main() {
+    use pty_process::Command as _;
+    use std::os::unix::process::ExitStatusExt as _;
+
     let (w, h) = if let Some((w, h)) = term_size::dimensions() {
         (w as u16, h as u16)
     } else {
@@ -93,7 +102,7 @@ fn main() {
         let mut child = smol::process::Command::new("nethack")
             .spawn_pty(Some(&pty_process::Size::new(h, w)))
             .unwrap();
-        run(&child).await.unwrap();
+        main::run(&child).await.unwrap();
         child.status().await.unwrap()
     });
     std::process::exit(
@@ -101,4 +110,9 @@ fn main() {
             .code()
             .unwrap_or_else(|| status.signal().unwrap_or(0) + 128),
     );
+}
+
+#[cfg(not(feature = "backend-smol"))]
+fn main() {
+    unimplemented!()
 }

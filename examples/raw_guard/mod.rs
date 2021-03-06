@@ -5,6 +5,7 @@ pub struct RawGuard {
 }
 
 impl RawGuard {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         let stdin = std::io::stdin().as_raw_fd();
         let termios = nix::sys::termios::tcgetattr(stdin).unwrap();
