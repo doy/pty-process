@@ -4,6 +4,13 @@ version = "0.1.0"
 authors = ["Jesse Luehrs <doy@tozt.net>"]
 edition = "2018"
 
+description = "spawn commands attached to a pty"
+repository = "https://git.tozt.net/pty-process"
+readme = "README.md"
+keywords = ["pty", "spawn", "execute", "process"]
+categories = ["asynchronous", "command-line-interface"]
+license = "MIT"
+
 [dependencies]
 libc = "0.2"
 nix = "0.20"
