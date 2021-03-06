@@ -14,7 +14,7 @@ pub enum Error {
     CreatePty(#[source] nix::Error),
 
     /// error opening pts at \<path\>
-    #[error("error opening pts at {0}")]
+    #[error("error opening pts at {1}")]
     OpenPts(#[source] std::io::Error, std::path::PathBuf),
 
     /// error setting terminal size
