@@ -10,10 +10,17 @@ mod std;
 #[cfg(feature = "backend-tokio")]
 mod tokio;
 
+/// Adds methods to the existing `Command` struct.
+///
+/// This trait is automatically implemented for a backend's `Command` struct
+/// when that backend's feature is enabled.
 pub trait Command {
     type Child;
     type Pty;
 
+    /// Creates a new pty, associates the command's stdin/stdout/stderr with
+    /// that pty, and then calls `spawn`. This will override any previous
+    /// calls to `stdin`/`stdout`/`stderr`.
     fn spawn_pty(
         &mut self,
         size: Option<&crate::pty::Size>,
@@ -75,6 +82,7 @@ where
     }
 }
 
+/// Wrapper struct adding pty methods to the normal `Child` struct.
 pub struct Child<C, P> {
     child: C,
     pty: P,
@@ -84,14 +92,32 @@ impl<C, P> Child<C, P>
 where
     P: crate::pty::Pty,
 {
+    /// Returns a reference to the pty.
+    ///
+    /// The underlying pty instance is guaranteed to implement
+    /// [`AsRawFd`](::std::os::unix::io::AsRawFd), as well as the appropriate
+    /// `Read` and `Write` traits for the associated backend.
     pub fn pty(&self) -> &P::Pt {
         self.pty.pt()
     }
 
+    /// Returns a mutable reference to the pty.
+    ///
+    /// The underlying pty instance is guaranteed to implement
+    /// [`AsRawFd`](::std::os::unix::io::AsRawFd), as well as the appropriate
+    /// `Read` and `Write` traits for the associated backend.
+    ///
+    /// This method is primarily useful for the tokio backend, since tokio's
+    /// `AsyncRead` and `AsyncWrite` traits have methods which take mutable
+    /// references.
     pub fn pty_mut(&mut self) -> &mut P::Pt {
         self.pty.pt_mut()
     }
 
+    /// Causes the pty to change its size.
+    ///
+    /// This will additionally cause a `SIGWINCH` signal to be sent to the
+    /// running process.
     pub fn resize_pty(&self, size: &crate::pty::Size) -> Result<()> {
         self.pty.resize(size)
     }

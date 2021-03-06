@@ -21,6 +21,7 @@ pub trait Pty {
     fn resize(&self, size: &super::Size) -> Result<()>;
 }
 
+/// Represents the size of the pty.
 pub struct Size {
     row: u16,
     col: u16,
@@ -29,6 +30,8 @@ pub struct Size {
 }
 
 impl Size {
+    /// Returns a [`Size`](Size) instance with the given number of rows and
+    /// columns.
     pub fn new(row: u16, col: u16) -> Self {
         Self {
             row,
@@ -38,6 +41,8 @@ impl Size {
         }
     }
 
+    /// Returns a [`Size`](Size) instance with the given number of rows and
+    /// columns, as well as the given pixel dimensions.
     pub fn new_with_pixel(
         row: u16,
         col: u16,
