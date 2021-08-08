@@ -5,15 +5,15 @@ mod main {
     use std::io::{Read as _, Write as _};
     use std::os::unix::io::AsRawFd as _;
 
-    pub fn run(child: &pty_process::std::Child) {
+    pub fn run(pty: &mut pty_process::StdPty) {
         let _raw = super::raw_guard::RawGuard::new();
         let mut buf = [0_u8; 4096];
-        let pty = child.pty().as_raw_fd();
+        let pty_fd = pty.as_raw_fd();
         let stdin = std::io::stdin().as_raw_fd();
 
         loop {
             let mut set = nix::sys::select::FdSet::new();
-            set.insert(pty);
+            set.insert(pty_fd);
             set.insert(stdin);
             match nix::sys::select::select(
                 None,
@@ -24,8 +24,8 @@ mod main {
             ) {
                 Ok(n) => {
                     if n > 0 {
-                        if set.contains(pty) {
-                            match child.pty().read(&mut buf) {
+                        if set.contains(pty_fd) {
+                            match pty.read(&mut buf) {
                                 Ok(bytes) => {
                                     let buf = &buf[..bytes];
                                     let stdout = std::io::stdout();
@@ -47,7 +47,7 @@ mod main {
                             match std::io::stdin().read(&mut buf) {
                                 Ok(bytes) => {
                                     let buf = &buf[..bytes];
-                                    child.pty().write_all(buf).unwrap();
+                                    pty.write_all(buf).unwrap();
                                 }
                                 Err(e) => {
                                     eprintln!("stdin read failed: {:?}", e);
@@ -71,12 +71,12 @@ fn main() {
     use pty_process::Command as _;
     use std::os::unix::process::ExitStatusExt as _;
 
-    let mut child = std::process::Command::new("sleep")
+    let (mut child, mut pty) = std::process::Command::new("sleep")
         .args(&["500"])
         .spawn_pty(Some(&pty_process::Size::new(24, 80)))
         .unwrap();
 
-    main::run(&child);
+    main::run(&mut pty);
 
     let status = child.wait().unwrap();
     std::process::exit(

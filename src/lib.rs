@@ -21,15 +21,15 @@
 //! provides additional methods for interacting with the pty:
 //!
 //! ```no_run
-//! # use pty_process::Command as _;
+//! # use pty_process::{Command as _, Pty};
 //! #
 //! # let mut cmd = std::process::Command::new("nethack");
-//! # let mut child = cmd
+//! # let (mut child, mut pty) = cmd
 //! #   .spawn_pty(Some(&pty_process::Size::new(24, 80))).unwrap();
 //! use std::io::Write as _;
 //!
-//! child.pty().write_all(b"foo\n").unwrap();
-//! child.resize_pty(&pty_process::Size::new(30, 100)).unwrap();
+//! pty.write_all(b"foo\n").unwrap();
+//! pty.resize(&pty_process::Size::new(30, 100)).unwrap();
 //! let status = child.wait().unwrap();
 //! ```
 //!
@@ -46,17 +46,18 @@
 //! Any number of backends may be enabled, depending on your needs.
 
 mod command;
-pub use command::{Child, Command};
+pub use command::Command;
 mod error;
 pub use error::{Error, Result};
 mod pty;
+pub use pty::Pty;
 pub use pty::Size;
 
 #[cfg(feature = "backend-async-std")]
-pub mod async_std;
+pub use pty::async_io::Pty as AsyncPty;
 #[cfg(feature = "backend-smol")]
-pub mod smol;
+pub use pty::smol::Pty as SmolPty;
 #[cfg(feature = "backend-std")]
-pub mod std;
+pub use pty::std::Pty as StdPty;
 #[cfg(feature = "backend-tokio")]
-pub mod tokio;
+pub use pty::tokio::Pty as TokioPty;

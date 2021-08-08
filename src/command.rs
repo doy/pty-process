@@ -16,7 +16,7 @@ mod tokio;
 /// when that backend's feature is enabled.
 pub trait Command {
     type Child;
-    type Pty;
+    type Pty: crate::pty::Pty;
 
     /// Creates a new pty, associates the command's stdin/stdout/stderr with
     /// that pty, and then calls `spawn`. This will override any previous
@@ -24,7 +24,7 @@ pub trait Command {
     fn spawn_pty(
         &mut self,
         size: Option<&crate::pty::Size>,
-    ) -> Result<Child<Self::Child, Self::Pty>>;
+    ) -> Result<(Self::Child, Self::Pty)>;
 }
 
 impl<T> Command for T
@@ -40,7 +40,7 @@ where
     fn spawn_pty(
         &mut self,
         size: Option<&crate::pty::Size>,
-    ) -> Result<Child<Self::Child, Self::Pty>> {
+    ) -> Result<(Self::Child, Self::Pty)> {
         let (pty, pts, stdin, stdout, stderr) = setup_pty::<Self::Pty>(size)?;
 
         let pt_fd = pty.pt().as_raw_fd();
@@ -78,62 +78,7 @@ where
 
         let child = self.spawn_impl().map_err(Error::Spawn)?;
 
-        Ok(Child { child, pty })
-    }
-}
-
-/// Wrapper struct adding pty methods to the normal `Child` struct.
-pub struct Child<C, P> {
-    child: C,
-    pty: P,
-}
-
-impl<C, P> Child<C, P>
-where
-    P: crate::pty::Pty,
-{
-    /// Returns a reference to the pty.
-    ///
-    /// The underlying pty instance is guaranteed to implement
-    /// [`AsRawFd`](::std::os::unix::io::AsRawFd), as well as the appropriate
-    /// `Read` and `Write` traits for the associated backend.
-    pub fn pty(&self) -> &P::Pt {
-        self.pty.pt()
-    }
-
-    /// Returns a mutable reference to the pty.
-    ///
-    /// The underlying pty instance is guaranteed to implement
-    /// [`AsRawFd`](::std::os::unix::io::AsRawFd), as well as the appropriate
-    /// `Read` and `Write` traits for the associated backend.
-    ///
-    /// This method is primarily useful for the tokio backend, since tokio's
-    /// `AsyncRead` and `AsyncWrite` traits have methods which take mutable
-    /// references.
-    pub fn pty_mut(&mut self) -> &mut P::Pt {
-        self.pty.pt_mut()
-    }
-
-    /// Causes the pty to change its size.
-    ///
-    /// This will additionally cause a `SIGWINCH` signal to be sent to the
-    /// running process.
-    pub fn resize_pty(&self, size: &crate::pty::Size) -> Result<()> {
-        self.pty.resize(size)
-    }
-}
-
-impl<C, P> ::std::ops::Deref for Child<C, P> {
-    type Target = C;
-
-    fn deref(&self) -> &Self::Target {
-        &self.child
-    }
-}
-
-impl<C, P> ::std::ops::DerefMut for Child<C, P> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.child
+        Ok((child, pty))
     }
 }
 

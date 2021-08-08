@@ -9,7 +9,7 @@ pub mod std;
 #[cfg(feature = "backend-tokio")]
 pub mod tokio;
 
-pub trait Pty {
+pub trait Pty: ::std::ops::Deref + ::std::ops::DerefMut {
     type Pt;
 
     fn new() -> Result<Self>

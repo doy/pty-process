@@ -47,3 +47,17 @@ impl super::Pty for Pty {
             .map_err(Error::SetTermSize)
     }
 }
+
+impl ::std::ops::Deref for Pty {
+    type Target = async_io::Async<std::fs::File>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.pt
+    }
+}
+
+impl ::std::ops::DerefMut for Pty {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.pt
+    }
+}

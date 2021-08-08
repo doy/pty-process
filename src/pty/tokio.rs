@@ -11,36 +11,39 @@ use std::os::unix::io::{AsRawFd as _, FromRawFd as _};
 // the read to finish before processing the write, which will never happen).
 // this unfortunately shows up in patterns like select! pretty frequently, so
 // we need to do this the complicated way/:
-pub struct AsyncPty(tokio::io::unix::AsyncFd<std::fs::File>);
+pub struct Pty {
+    pt: tokio::io::unix::AsyncFd<std::fs::File>,
+    ptsname: std::path::PathBuf,
+}
 
-impl std::ops::Deref for AsyncPty {
+impl std::ops::Deref for Pty {
     type Target = tokio::io::unix::AsyncFd<std::fs::File>;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        &self.pt
     }
 }
 
-impl std::ops::DerefMut for AsyncPty {
+impl std::ops::DerefMut for Pty {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        &mut self.pt
     }
 }
 
-impl std::os::unix::io::AsRawFd for AsyncPty {
+impl std::os::unix::io::AsRawFd for Pty {
     fn as_raw_fd(&self) -> std::os::unix::io::RawFd {
-        self.0.as_raw_fd()
+        self.pt.as_raw_fd()
     }
 }
 
-impl tokio::io::AsyncRead for AsyncPty {
+impl tokio::io::AsyncRead for Pty {
     fn poll_read(
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf,
     ) -> std::task::Poll<std::io::Result<()>> {
         loop {
-            let mut guard = futures::ready!(self.0.poll_read_ready(cx))?;
+            let mut guard = futures::ready!(self.pt.poll_read_ready(cx))?;
             let mut b = [0u8; 4096];
             match guard.try_io(|inner| inner.get_ref().read(&mut b)) {
                 Ok(Ok(bytes)) => {
@@ -58,14 +61,14 @@ impl tokio::io::AsyncRead for AsyncPty {
     }
 }
 
-impl tokio::io::AsyncWrite for AsyncPty {
+impl tokio::io::AsyncWrite for Pty {
     fn poll_write(
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> std::task::Poll<std::io::Result<usize>> {
         loop {
-            let mut guard = futures::ready!(self.0.poll_write_ready(cx))?;
+            let mut guard = futures::ready!(self.pt.poll_write_ready(cx))?;
             match guard.try_io(|inner| inner.get_ref().write(buf)) {
                 Ok(result) => return std::task::Poll::Ready(result),
                 Err(_would_block) => continue,
@@ -78,7 +81,7 @@ impl tokio::io::AsyncWrite for AsyncPty {
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<std::io::Result<()>> {
         loop {
-            let mut guard = futures::ready!(self.0.poll_write_ready(cx))?;
+            let mut guard = futures::ready!(self.pt.poll_write_ready(cx))?;
             match guard.try_io(|inner| inner.get_ref().flush()) {
                 Ok(_) => return std::task::Poll::Ready(Ok(())),
                 Err(_would_block) => continue,
@@ -94,13 +97,8 @@ impl tokio::io::AsyncWrite for AsyncPty {
     }
 }
 
-pub struct Pty {
-    pt: AsyncPty,
-    ptsname: std::path::PathBuf,
-}
-
 impl super::Pty for Pty {
-    type Pt = AsyncPty;
+    type Pt = tokio::io::unix::AsyncFd<std::fs::File>;
 
     fn new() -> Result<Self> {
         let (pt_fd, ptsname) = super::create_pt()?;
@@ -125,9 +123,8 @@ impl super::Pty for Pty {
         // File object to take full ownership.
         let pt = unsafe { std::fs::File::from_raw_fd(pt_fd) };
 
-        let pt = AsyncPty(
-            tokio::io::unix::AsyncFd::new(pt).map_err(Error::AsyncPty)?,
-        );
+        let pt =
+            tokio::io::unix::AsyncFd::new(pt).map_err(Error::AsyncPty)?;
 
         Ok(Self { pt, ptsname })
     }
