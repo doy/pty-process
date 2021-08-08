@@ -5,7 +5,7 @@ mod main {
     use std::io::{Read as _, Write as _};
     use std::os::unix::io::AsRawFd as _;
 
-    pub fn run(pty: &mut pty_process::StdPty) {
+    pub fn run(pty: &mut pty_process::std::Pty) {
         let _raw = super::raw_guard::RawGuard::new();
         let mut buf = [0_u8; 4096];
         let pty_fd = pty.as_raw_fd();

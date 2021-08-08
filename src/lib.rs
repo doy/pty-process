@@ -54,10 +54,18 @@ pub use pty::Pty;
 pub use pty::Size;
 
 #[cfg(feature = "backend-async-std")]
-pub use pty::async_io::Pty as AsyncPty;
+pub mod async_io {
+    pub use super::pty::async_io::Pty;
+}
 #[cfg(feature = "backend-smol")]
-pub use pty::smol::Pty as SmolPty;
+pub mod smol {
+    pub use super::pty::smol::Pty;
+}
 #[cfg(feature = "backend-std")]
-pub use pty::std::Pty as StdPty;
+pub mod std {
+    pub use super::pty::std::Pty;
+}
 #[cfg(feature = "backend-tokio")]
-pub use pty::tokio::Pty as TokioPty;
+pub mod tokio {
+    pub use super::pty::tokio::Pty;
+}
