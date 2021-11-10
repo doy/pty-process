@@ -49,9 +49,8 @@ where
         self.std_fds(stdin, stdout, stderr);
 
         let pre_exec = move || {
-            nix::unistd::setsid().map_err(|e| e.as_errno().unwrap())?;
-            set_controlling_terminal(pts_fd)
-                .map_err(|e| e.as_errno().unwrap())?;
+            nix::unistd::setsid()?;
+            set_controlling_terminal(pts_fd)?;
 
             // in the parent, destructors will handle closing these file
             // descriptors (other than pt, used by the parent to
@@ -59,15 +58,14 @@ where
             // the child, we end by calling exec(), which doesn't call
             // destructors.
 
-            // XXX unwrap
-            nix::unistd::close(pt_fd).map_err(|e| e.as_errno().unwrap())?;
-            nix::unistd::close(pts_fd).map_err(|e| e.as_errno().unwrap())?;
+            nix::unistd::close(pt_fd)?;
+            nix::unistd::close(pts_fd)?;
             // at this point, stdin/stdout/stderr have already been
             // reopened as fds 0/1/2 in the child, so we can (and should)
             // close the originals
-            nix::unistd::close(stdin).map_err(|e| e.as_errno().unwrap())?;
-            nix::unistd::close(stdout).map_err(|e| e.as_errno().unwrap())?;
-            nix::unistd::close(stderr).map_err(|e| e.as_errno().unwrap())?;
+            nix::unistd::close(stdin)?;
+            nix::unistd::close(stdout)?;
+            nix::unistd::close(stderr)?;
 
             Ok(())
         };
