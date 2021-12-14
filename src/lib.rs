@@ -62,7 +62,7 @@
 mod command;
 pub use command::{Child, Command};
 mod error;
-pub use error::{Error, Result};
+pub use error::{Error, Result, Source};
 mod pty;
 pub use pty::Size;
 

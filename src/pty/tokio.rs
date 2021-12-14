@@ -104,7 +104,7 @@ impl super::Pty for Pty {
         let (pt_fd, ptsname) = super::create_pt()?;
 
         let bits = nix::fcntl::fcntl(pt_fd, nix::fcntl::FcntlArg::F_GETFL)
-            .map_err(crate::error::Error::AsyncPtyNix)?;
+            .map_err(crate::error::create_pty)?;
         // this should be safe because i am just using the return value of
         // F_GETFL directly, but for whatever reason nix doesn't like
         // from_bits(bits) (it claims it has an unknown field)
@@ -114,7 +114,7 @@ impl super::Pty for Pty {
             )
         };
         nix::fcntl::fcntl(pt_fd, nix::fcntl::FcntlArg::F_SETFL(opts))
-            .map_err(crate::error::Error::AsyncPtyNix)?;
+            .map_err(crate::error::create_pty)?;
 
         // safe because posix_openpt (or the previous functions operating on
         // the result) would have returned an Err (causing us to return early)
@@ -125,7 +125,7 @@ impl super::Pty for Pty {
 
         let pt = AsyncPty(
             tokio::io::unix::AsyncFd::new(pt)
-                .map_err(crate::error::Error::AsyncPty)?,
+                .map_err(crate::error::create_pty)?,
         );
 
         Ok(Self { pt, ptsname })
@@ -144,14 +144,12 @@ impl super::Pty for Pty {
             .read(true)
             .write(true)
             .open(&self.ptsname)
-            .map_err(|e| {
-                crate::error::Error::OpenPts(e, self.ptsname.clone())
-            })?;
+            .map_err(crate::error::create_pty)?;
         Ok(fh)
     }
 
     fn resize(&self, size: &super::Size) -> crate::error::Result<()> {
         super::set_term_size(self.pt().as_raw_fd(), size)
-            .map_err(crate::error::Error::SetTermSize)
+            .map_err(crate::error::set_term_size)
     }
 }

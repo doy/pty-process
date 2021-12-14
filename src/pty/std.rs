@@ -34,14 +34,12 @@ impl super::Pty for Pty {
             .read(true)
             .write(true)
             .open(&self.ptsname)
-            .map_err(|e| {
-                crate::error::Error::OpenPts(e, self.ptsname.clone())
-            })?;
+            .map_err(crate::error::create_pty)?;
         Ok(fh)
     }
 
     fn resize(&self, size: &super::Size) -> crate::error::Result<()> {
         super::set_term_size(self.pt().as_raw_fd(), size)
-            .map_err(crate::error::Error::SetTermSize)
+            .map_err(crate::error::set_term_size)
     }
 }

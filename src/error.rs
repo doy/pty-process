@@ -1,50 +1,56 @@
+/// Source for errors in this crate
+#[derive(Debug)]
+pub enum Source {
+    /// error came from std::io::Error
+    Io(std::io::Error),
+    /// error came from nix::Error
+    Nix(nix::Error),
+}
+
+impl std::fmt::Display for Source {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Io(e) => write!(f, "{}", e),
+            Self::Nix(e) => write!(f, "{}", e),
+        }
+    }
+}
+
+impl std::convert::From<std::io::Error> for Source {
+    fn from(e: std::io::Error) -> Self {
+        Self::Io(e)
+    }
+}
+
+impl std::convert::From<nix::Error> for Source {
+    fn from(e: nix::Error) -> Self {
+        Self::Nix(e)
+    }
+}
+
 /// Error type for this crate
 #[derive(Debug)]
 pub enum Error {
-    /// error making pty async
-    AsyncPty(std::io::Error),
-
-    /// error making pty async
-    AsyncPtyNix(nix::Error),
-
     /// error creating pty
-    CreatePty(nix::Error),
-
-    /// error opening pts at \<path\>
-    OpenPts(std::io::Error, std::path::PathBuf),
+    CreatePty(Source),
 
     /// error setting terminal size
-    SetTermSize(nix::Error),
+    SetTermSize(Source),
 
     /// error spawning subprocess
-    Spawn(std::io::Error),
-
-    /// error spawning subprocess
-    SpawnNix(nix::Error),
+    Spawn(Source),
 }
 
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::AsyncPty(e) => {
-                write!(f, "error making pty async: {}", e)
-            }
-            Self::AsyncPtyNix(e) => {
-                write!(f, "error making pty async: {}", e)
-            }
             Self::CreatePty(e) => {
                 write!(f, "error creating pty: {}", e)
-            }
-            Self::OpenPts(e, path) => {
-                write!(f, "error opening pts at {}: {}", path.display(), e)
             }
             Self::SetTermSize(e) => {
                 write!(f, "error setting terminal size: {}", e)
             }
             Self::Spawn(e) => {
-                write!(f, "error spawning subprocess: {}", e)
-            }
-            Self::SpawnNix(e) => {
                 write!(f, "error spawning subprocess: {}", e)
             }
         }
@@ -54,16 +60,27 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Self::AsyncPty(e) | Self::Spawn(e) | Self::OpenPts(e, _) => {
-                Some(e)
+            Self::CreatePty(e) | Self::SetTermSize(e) | Self::Spawn(e) => {
+                match e {
+                    Source::Io(e) => Some(e),
+                    Source::Nix(e) => Some(e),
+                }
             }
-            Self::AsyncPtyNix(e) | Self::SpawnNix(e) | Self::CreatePty(e) => {
-                Some(e)
-            }
-            Self::SetTermSize(e) => Some(e),
         }
     }
 }
 
 /// Convenience wrapper for `Result`s using [`Error`](Error)
 pub type Result<T> = std::result::Result<T, Error>;
+
+pub fn create_pty<S: std::convert::Into<Source>>(source: S) -> Error {
+    Error::CreatePty(source.into())
+}
+
+pub fn set_term_size<S: std::convert::Into<Source>>(source: S) -> Error {
+    Error::SetTermSize(source.into())
+}
+
+pub fn spawn<S: std::convert::Into<Source>>(source: S) -> Error {
+    Error::Spawn(source.into())
+}

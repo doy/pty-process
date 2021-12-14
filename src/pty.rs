@@ -75,12 +75,12 @@ fn create_pt(
     let pt = nix::pty::posix_openpt(
         nix::fcntl::OFlag::O_RDWR | nix::fcntl::OFlag::O_NOCTTY,
     )
-    .map_err(crate::error::Error::CreatePty)?;
-    nix::pty::grantpt(&pt).map_err(crate::error::Error::CreatePty)?;
-    nix::pty::unlockpt(&pt).map_err(crate::error::Error::CreatePty)?;
+    .map_err(crate::error::create_pty)?;
+    nix::pty::grantpt(&pt).map_err(crate::error::create_pty)?;
+    nix::pty::unlockpt(&pt).map_err(crate::error::create_pty)?;
 
     let ptsname = nix::pty::ptsname_r(&pt)
-        .map_err(crate::error::Error::CreatePty)?
+        .map_err(crate::error::create_pty)?
         .into();
 
     let pt_fd = pt.into_raw_fd();

@@ -22,13 +22,9 @@ pub trait Command {
     /// calls to `stdin`/`stdout`/`stderr`.
     ///
     /// # Errors
-    /// * `Error::AsyncPty`: error making pty async
-    /// * `Error::AsyncPtyNix`: error making pty async
     /// * `Error::CreatePty`: error creating pty
-    /// * `Error::OpenPts`: error opening pts
     /// * `Error::SetTermSize`: error setting terminal size
     /// * `Error::Spawn`: error spawning subprocess
-    /// * `Error::SpawnNix`: error spawning subprocess
     fn spawn_pty(
         &mut self,
         size: Option<&crate::pty::Size>,
@@ -81,7 +77,7 @@ where
         // async-signal-safe).
         unsafe { self.pre_exec_impl(pre_exec) };
 
-        let child = self.spawn_impl().map_err(crate::error::Error::Spawn)?;
+        let child = self.spawn_impl().map_err(crate::error::spawn)?;
 
         Ok(Child { child, pty })
     }
@@ -185,12 +181,11 @@ where
     let pts = pty.pts()?;
     let pts_fd = pts.as_raw_fd();
 
-    let stdin =
-        nix::unistd::dup(pts_fd).map_err(crate::error::Error::SpawnNix)?;
+    let stdin = nix::unistd::dup(pts_fd).map_err(crate::error::create_pty)?;
     let stdout =
-        nix::unistd::dup(pts_fd).map_err(crate::error::Error::SpawnNix)?;
+        nix::unistd::dup(pts_fd).map_err(crate::error::create_pty)?;
     let stderr =
-        nix::unistd::dup(pts_fd).map_err(crate::error::Error::SpawnNix)?;
+        nix::unistd::dup(pts_fd).map_err(crate::error::create_pty)?;
 
     Ok((pty, pts, stdin, stdout, stderr))
 }
