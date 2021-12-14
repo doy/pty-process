@@ -1,6 +1,6 @@
 use std::os::unix::io::FromRawFd as _;
 
-impl super::CommandImpl for tokio::process::Command {
+impl super::Impl for tokio::process::Command {
     type Child = tokio::process::Child;
     type Pty = crate::pty::tokio::Pty;
 

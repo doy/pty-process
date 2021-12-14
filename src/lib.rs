@@ -45,6 +45,20 @@
 //!
 //! Any number of backends may be enabled, depending on your needs.
 
+#![warn(clippy::cargo)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::nursery)]
+#![warn(clippy::unwrap_used)]
+#![warn(clippy::expect_used)]
+#![warn(clippy::indexing_slicing)]
+#![warn(clippy::as_conversions)]
+#![allow(clippy::cognitive_complexity)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::similar_names)]
+#![allow(clippy::struct_excessive_bools)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::too_many_lines)]
+
 mod command;
 pub use command::{Child, Command};
 mod error;

@@ -1,5 +1,3 @@
-use crate::error::*;
-
 use std::os::unix::io::{AsRawFd as _, FromRawFd as _};
 
 pub struct Pty {
@@ -10,7 +8,7 @@ pub struct Pty {
 impl super::Pty for Pty {
     type Pt = async_io::Async<std::fs::File>;
 
-    fn new() -> Result<Self> {
+    fn new() -> crate::error::Result<Self> {
         let (pt_fd, ptsname) = super::create_pt()?;
 
         // safe because posix_openpt (or the previous functions operating on
@@ -20,7 +18,8 @@ impl super::Pty for Pty {
         // File object to take full ownership.
         let pt = unsafe { std::fs::File::from_raw_fd(pt_fd) };
 
-        let pt = async_io::Async::new(pt).map_err(Error::AsyncPty)?;
+        let pt = async_io::Async::new(pt)
+            .map_err(crate::error::Error::AsyncPty)?;
 
         Ok(Self { pt, ptsname })
     }
@@ -33,17 +32,19 @@ impl super::Pty for Pty {
         &mut self.pt
     }
 
-    fn pts(&self) -> Result<std::fs::File> {
+    fn pts(&self) -> crate::error::Result<std::fs::File> {
         let fh = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
             .open(&self.ptsname)
-            .map_err(|e| Error::OpenPts(e, self.ptsname.clone()))?;
+            .map_err(|e| {
+                crate::error::Error::OpenPts(e, self.ptsname.clone())
+            })?;
         Ok(fh)
     }
 
-    fn resize(&self, size: &super::Size) -> Result<()> {
+    fn resize(&self, size: &super::Size) -> crate::error::Result<()> {
         super::set_term_size(self.pt().as_raw_fd(), size)
-            .map_err(Error::SetTermSize)
+            .map_err(crate::error::Error::SetTermSize)
     }
 }

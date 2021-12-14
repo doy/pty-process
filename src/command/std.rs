@@ -1,7 +1,7 @@
 use std::os::unix::io::FromRawFd as _;
 use std::os::unix::process::CommandExt as _;
 
-impl super::CommandImpl for std::process::Command {
+impl super::Impl for std::process::Command {
     type Child = std::process::Child;
     type Pty = crate::pty::std::Pty;
 

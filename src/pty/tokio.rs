@@ -1,5 +1,3 @@
-use crate::error::*;
-
 use std::io::{Read as _, Write as _};
 use std::os::unix::io::{AsRawFd as _, FromRawFd as _};
 
@@ -41,14 +39,14 @@ impl tokio::io::AsyncRead for AsyncPty {
     ) -> std::task::Poll<std::io::Result<()>> {
         loop {
             let mut guard = futures::ready!(self.0.poll_read_ready(cx))?;
-            let mut b = [0u8; 4096];
+            let mut b = [0_u8; 4096];
             match guard.try_io(|inner| inner.get_ref().read(&mut b)) {
                 Ok(Ok(bytes)) => {
                     // XXX this is safe, but not particularly efficient
                     buf.clear();
                     buf.initialize_unfilled_to(bytes);
                     buf.set_filled(bytes);
-                    buf.filled_mut().copy_from_slice(&b[..bytes]);
+                    buf.filled_mut().copy_from_slice(b.get(..bytes).unwrap());
                     return std::task::Poll::Ready(Ok(()));
                 }
                 Ok(Err(e)) => return std::task::Poll::Ready(Err(e)),
@@ -102,11 +100,11 @@ pub struct Pty {
 impl super::Pty for Pty {
     type Pt = AsyncPty;
 
-    fn new() -> Result<Self> {
+    fn new() -> crate::error::Result<Self> {
         let (pt_fd, ptsname) = super::create_pt()?;
 
         let bits = nix::fcntl::fcntl(pt_fd, nix::fcntl::FcntlArg::F_GETFL)
-            .map_err(Error::AsyncPtyNix)?;
+            .map_err(crate::error::Error::AsyncPtyNix)?;
         // this should be safe because i am just using the return value of
         // F_GETFL directly, but for whatever reason nix doesn't like
         // from_bits(bits) (it claims it has an unknown field)
@@ -116,7 +114,7 @@ impl super::Pty for Pty {
             )
         };
         nix::fcntl::fcntl(pt_fd, nix::fcntl::FcntlArg::F_SETFL(opts))
-            .map_err(Error::AsyncPtyNix)?;
+            .map_err(crate::error::Error::AsyncPtyNix)?;
 
         // safe because posix_openpt (or the previous functions operating on
         // the result) would have returned an Err (causing us to return early)
@@ -126,7 +124,8 @@ impl super::Pty for Pty {
         let pt = unsafe { std::fs::File::from_raw_fd(pt_fd) };
 
         let pt = AsyncPty(
-            tokio::io::unix::AsyncFd::new(pt).map_err(Error::AsyncPty)?,
+            tokio::io::unix::AsyncFd::new(pt)
+                .map_err(crate::error::Error::AsyncPty)?,
         );
 
         Ok(Self { pt, ptsname })
@@ -140,17 +139,19 @@ impl super::Pty for Pty {
         &mut self.pt
     }
 
-    fn pts(&self) -> Result<std::fs::File> {
+    fn pts(&self) -> crate::error::Result<std::fs::File> {
         let fh = std::fs::OpenOptions::new()
             .read(true)
             .write(true)
             .open(&self.ptsname)
-            .map_err(|e| Error::OpenPts(e, self.ptsname.clone()))?;
+            .map_err(|e| {
+                crate::error::Error::OpenPts(e, self.ptsname.clone())
+            })?;
         Ok(fh)
     }
 
-    fn resize(&self, size: &super::Size) -> Result<()> {
+    fn resize(&self, size: &super::Size) -> crate::error::Result<()> {
         super::set_term_size(self.pt().as_raw_fd(), size)
-            .map_err(Error::SetTermSize)
+            .map_err(crate::error::Error::SetTermSize)
     }
 }

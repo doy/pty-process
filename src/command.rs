@@ -1,4 +1,3 @@
-use crate::error::*;
 use crate::pty::Pty as _;
 
 use ::std::os::unix::io::AsRawFd as _;
@@ -21,18 +20,26 @@ pub trait Command {
     /// Creates a new pty, associates the command's stdin/stdout/stderr with
     /// that pty, and then calls `spawn`. This will override any previous
     /// calls to `stdin`/`stdout`/`stderr`.
+    ///
+    /// # Errors
+    /// * `Error::AsyncPty`: error making pty async
+    /// * `Error::AsyncPtyNix`: error making pty async
+    /// * `Error::CreatePty`: error creating pty
+    /// * `Error::OpenPts`: error opening pts
+    /// * `Error::SetTermSize`: error setting terminal size
+    /// * `Error::Spawn`: error spawning subprocess
+    /// * `Error::SpawnNix`: error spawning subprocess
     fn spawn_pty(
         &mut self,
         size: Option<&crate::pty::Size>,
-    ) -> Result<Child<Self::Child, Self::Pty>>;
+    ) -> crate::error::Result<Child<Self::Child, Self::Pty>>;
 }
 
 impl<T> Command for T
 where
-    T: CommandImpl,
+    T: Impl,
     T::Pty: crate::pty::Pty,
-    <<T as CommandImpl>::Pty as crate::pty::Pty>::Pt:
-        ::std::os::unix::io::AsRawFd,
+    <<T as Impl>::Pty as crate::pty::Pty>::Pt: ::std::os::unix::io::AsRawFd,
 {
     type Child = T::Child;
     type Pty = T::Pty;
@@ -40,7 +47,7 @@ where
     fn spawn_pty(
         &mut self,
         size: Option<&crate::pty::Size>,
-    ) -> Result<Child<Self::Child, Self::Pty>> {
+    ) -> crate::error::Result<Child<Self::Child, Self::Pty>> {
         let (pty, pts, stdin, stdout, stderr) = setup_pty::<Self::Pty>(size)?;
 
         let pt_fd = pty.pt().as_raw_fd();
@@ -74,7 +81,7 @@ where
         // async-signal-safe).
         unsafe { self.pre_exec_impl(pre_exec) };
 
-        let child = self.spawn_impl().map_err(Error::Spawn)?;
+        let child = self.spawn_impl().map_err(crate::error::Error::Spawn)?;
 
         Ok(Child { child, pty })
     }
@@ -116,7 +123,13 @@ where
     ///
     /// This will additionally cause a `SIGWINCH` signal to be sent to the
     /// running process.
-    pub fn resize_pty(&self, size: &crate::pty::Size) -> Result<()> {
+    ///
+    /// # Errors
+    /// * `Error::SetTermSize`: error setting terminal size
+    pub fn resize_pty(
+        &self,
+        size: &crate::pty::Size,
+    ) -> crate::error::Result<()> {
         self.pty.resize(size)
     }
 }
@@ -136,7 +149,7 @@ impl<C, P> ::std::ops::DerefMut for Child<C, P> {
 }
 
 // XXX shouldn't be pub?
-pub trait CommandImpl {
+pub trait Impl {
     type Child;
     type Pty;
 
@@ -154,7 +167,7 @@ pub trait CommandImpl {
 
 fn setup_pty<P>(
     size: Option<&crate::pty::Size>,
-) -> Result<(
+) -> crate::error::Result<(
     P,
     ::std::fs::File,
     ::std::os::unix::io::RawFd,
@@ -172,9 +185,12 @@ where
     let pts = pty.pts()?;
     let pts_fd = pts.as_raw_fd();
 
-    let stdin = nix::unistd::dup(pts_fd).map_err(Error::SpawnNix)?;
-    let stdout = nix::unistd::dup(pts_fd).map_err(Error::SpawnNix)?;
-    let stderr = nix::unistd::dup(pts_fd).map_err(Error::SpawnNix)?;
+    let stdin =
+        nix::unistd::dup(pts_fd).map_err(crate::error::Error::SpawnNix)?;
+    let stdout =
+        nix::unistd::dup(pts_fd).map_err(crate::error::Error::SpawnNix)?;
+    let stderr =
+        nix::unistd::dup(pts_fd).map_err(crate::error::Error::SpawnNix)?;
 
     Ok((pty, pts, stdin, stdout, stderr))
 }

@@ -1,7 +1,7 @@
 use async_process::unix::CommandExt as _;
 use std::os::unix::io::FromRawFd as _;
 
-impl super::CommandImpl for async_process::Command {
+impl super::Impl for async_process::Command {
     type Child = async_process::Child;
     type Pty = crate::pty::async_io::Pty;
 
