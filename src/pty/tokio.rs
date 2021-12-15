@@ -46,7 +46,7 @@ impl tokio::io::AsyncRead for AsyncPty {
                     buf.clear();
                     buf.initialize_unfilled_to(bytes);
                     buf.set_filled(bytes);
-                    buf.filled_mut().copy_from_slice(b.get(..bytes).unwrap());
+                    buf.filled_mut().copy_from_slice(&b[..bytes]);
                     return std::task::Poll::Ready(Ok(()));
                 }
                 Ok(Err(e)) => return std::task::Poll::Ready(Err(e)),
