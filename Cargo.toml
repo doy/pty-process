@@ -10,6 +10,7 @@ readme = "README.md"
 keywords = ["pty", "spawn", "execute", "process"]
 categories = ["asynchronous", "command-line-interface"]
 license = "MIT"
+include = ["src/**/*", "LICENSE", "README.md", "CHANGELOG.md"]
 
 [dependencies]
 libc = "0.2.112"
