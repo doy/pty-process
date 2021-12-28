@@ -1,5 +1,13 @@
 use std::io::{Read as _, Write as _};
-use std::os::unix::io::{AsRawFd as _, FromRawFd as _};
+
+impl super::Impl for AsyncPty {
+    fn new_from_fh(fh: std::fs::File) -> crate::Result<Self> {
+        Ok(Self(
+            tokio::io::unix::AsyncFd::new(fh)
+                .map_err(crate::error::create_pty)?,
+        ))
+    }
+}
 
 // ideally i would just be able to use tokio::fs::File::from_std on the
 // std::fs::File i create from the pty fd, but it appears that tokio::fs::File
@@ -89,67 +97,5 @@ impl tokio::io::AsyncWrite for AsyncPty {
         _cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<std::io::Result<()>> {
         std::task::Poll::Ready(Ok(()))
-    }
-}
-
-pub struct Pty {
-    pt: AsyncPty,
-    ptsname: std::path::PathBuf,
-}
-
-impl super::Pty for Pty {
-    type Pt = AsyncPty;
-
-    fn new() -> crate::error::Result<Self> {
-        let (pt_fd, ptsname) = super::create_pt()?;
-
-        let bits = nix::fcntl::fcntl(pt_fd, nix::fcntl::FcntlArg::F_GETFL)
-            .map_err(crate::error::create_pty)?;
-        // this should be safe because i am just using the return value of
-        // F_GETFL directly, but for whatever reason nix doesn't like
-        // from_bits(bits) (it claims it has an unknown field)
-        let opts = unsafe {
-            nix::fcntl::OFlag::from_bits_unchecked(
-                bits | nix::fcntl::OFlag::O_NONBLOCK.bits(),
-            )
-        };
-        nix::fcntl::fcntl(pt_fd, nix::fcntl::FcntlArg::F_SETFL(opts))
-            .map_err(crate::error::create_pty)?;
-
-        // safe because posix_openpt (or the previous functions operating on
-        // the result) would have returned an Err (causing us to return early)
-        // if the file descriptor was invalid. additionally, into_raw_fd gives
-        // up ownership over the file descriptor, allowing the newly created
-        // File object to take full ownership.
-        let pt = unsafe { std::fs::File::from_raw_fd(pt_fd) };
-
-        let pt = AsyncPty(
-            tokio::io::unix::AsyncFd::new(pt)
-                .map_err(crate::error::create_pty)?,
-        );
-
-        Ok(Self { pt, ptsname })
-    }
-
-    fn pt(&self) -> &Self::Pt {
-        &self.pt
-    }
-
-    fn pt_mut(&mut self) -> &mut Self::Pt {
-        &mut self.pt
-    }
-
-    fn pts(&self) -> crate::error::Result<std::fs::File> {
-        let fh = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(&self.ptsname)
-            .map_err(crate::error::create_pty)?;
-        Ok(fh)
-    }
-
-    fn resize(&self, size: &super::Size) -> crate::error::Result<()> {
-        super::set_term_size(self.pt().as_raw_fd(), size)
-            .map_err(crate::error::set_term_size)
     }
 }

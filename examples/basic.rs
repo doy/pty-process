@@ -5,7 +5,7 @@ mod main {
     use std::io::{Read as _, Write as _};
     use std::os::unix::io::AsRawFd as _;
 
-    pub fn run(child: &pty_process::std::Child) {
+    pub fn run(child: &mut pty_process::std::Child) {
         let _raw = super::raw_guard::RawGuard::new();
         let mut buf = [0_u8; 4096];
         let pty = child.pty().as_raw_fd();
@@ -34,11 +34,7 @@ mod main {
                                     stdout.flush().unwrap();
                                 }
                                 Err(e) => {
-                                    // EIO means that the process closed the other
-                                    // end of the pty
-                                    if e.raw_os_error() != Some(libc::EIO) {
-                                        eprintln!("pty read failed: {:?}", e);
-                                    }
+                                    eprintln!("pty read failed: {:?}", e);
                                     break;
                                 }
                             };
@@ -62,21 +58,29 @@ mod main {
                     break;
                 }
             }
+            match child.try_wait() {
+                Ok(Some(_)) => break,
+                Ok(None) => {}
+                Err(e) => {
+                    println!("wait failed: {:?}", e);
+                    break;
+                }
+            }
         }
     }
 }
 
 #[cfg(feature = "backend-std")]
 fn main() {
-    use pty_process::Command as _;
     use std::os::unix::process::ExitStatusExt as _;
 
-    let mut child = std::process::Command::new("sleep")
-        .args(&["500"])
-        .spawn_pty(Some(&pty_process::Size::new(24, 80)))
-        .unwrap();
+    let pty = pty_process::std::Pty::new().unwrap();
+    pty.resize(pty_process::Size::new(24, 80)).unwrap();
+    let mut cmd = pty_process::std::Command::new("tac");
+    // cmd.args(&["500"]);
+    let mut child = cmd.spawn(pty).unwrap();
 
-    main::run(&child);
+    main::run(&mut child);
 
     let status = child.wait().unwrap();
     std::process::exit(

@@ -5,7 +5,7 @@ mod main {
     use smol::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
     pub async fn run(
-        child: &pty_process::smol::Child,
+        child: &mut pty_process::smol::Child,
     ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _raw = super::raw_guard::RawGuard::new();
 
@@ -36,18 +36,19 @@ mod main {
                         stdout.flush().await.unwrap();
                     }
                     Err(e) => {
-                        // EIO means that the process closed the other
-                        // end of the pty
-                        if e.raw_os_error() != Some(libc::EIO) {
-                            eprintln!("pty read failed: {:?}", e);
-                        }
+                        eprintln!("pty read failed: {:?}", e);
                         break;
                     }
                 }
             }
         });
 
-        ex.run(smol::future::or(input, output)).await;
+        let wait = async {
+            child.status_no_drop().await.unwrap();
+        };
+
+        ex.run(smol::future::or(smol::future::or(input, output), wait))
+            .await;
 
         Ok(())
     }
@@ -55,15 +56,15 @@ mod main {
 
 #[cfg(feature = "backend-smol")]
 fn main() {
-    use pty_process::Command as _;
     use std::os::unix::process::ExitStatusExt as _;
 
     let status = smol::block_on(async {
-        let mut child = smol::process::Command::new("sleep")
-            .args(&["500"])
-            .spawn_pty(Some(&pty_process::Size::new(24, 80)))
-            .unwrap();
-        main::run(&child).await.unwrap();
+        let pty = pty_process::smol::Pty::new().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        let mut cmd = pty_process::smol::Command::new("tac");
+        // cmd.args(&["500"]);
+        let mut child = cmd.spawn(pty).unwrap();
+        main::run(&mut child).await.unwrap();
         child.status().await.unwrap()
     });
     std::process::exit(

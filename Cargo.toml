@@ -36,3 +36,6 @@ backend-std = []
 backend-async-std = ["async-io", "async-process"]
 backend-smol = ["async-io", "async-process"]
 backend-tokio = ["tokio", "futures"]
+
+[patch.crates-io]
+async-process = { git = "https://github.com/doy/async-process", branch = "status-drop" }

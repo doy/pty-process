@@ -5,7 +5,7 @@ mod main {
     use smol::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
     pub async fn run(
-        child: &pty_process::smol::Child,
+        child: &mut pty_process::smol::Child,
     ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _raw = super::raw_guard::RawGuard::new();
 
@@ -82,7 +82,12 @@ mod main {
             }
         });
 
-        ex.run(smol::future::or(input, output)).await;
+        let wait = async {
+            child.status_no_drop().await.unwrap();
+        };
+
+        ex.run(smol::future::or(smol::future::or(input, output), wait))
+            .await;
 
         Ok(())
     }
@@ -90,7 +95,6 @@ mod main {
 
 #[cfg(feature = "backend-smol")]
 fn main() {
-    use pty_process::Command as _;
     use std::os::unix::process::ExitStatusExt as _;
 
     let (w, h) = if let Some((w, h)) = term_size::dimensions() {
@@ -99,10 +103,12 @@ fn main() {
         (80, 24)
     };
     let status = smol::block_on(async {
-        let mut child = smol::process::Command::new("nethack")
-            .spawn_pty(Some(&pty_process::Size::new(h, w)))
+        let pty = pty_process::smol::Pty::new().unwrap();
+        pty.resize(pty_process::Size::new(h, w)).unwrap();
+        let mut child = pty_process::smol::Command::new("nethack")
+            .spawn(pty)
             .unwrap();
-        main::run(&child).await.unwrap();
+        main::run(&mut child).await.unwrap();
         child.status().await.unwrap()
     });
     std::process::exit(

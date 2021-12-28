@@ -1,13 +1,11 @@
-use pty_process::Command as _;
-
 #[cfg(feature = "backend-std")]
 #[test]
 fn test_cat_std() {
     use std::io::{Read as _, Write as _};
 
-    let mut child = std::process::Command::new("cat")
-        .spawn_pty(Some(&pty_process::Size::new(24, 80)))
-        .unwrap();
+    let pty = pty_process::std::Pty::new().unwrap();
+    pty.resize(pty_process::Size::new(24, 80)).unwrap();
+    let mut child = pty_process::std::Command::new("cat").spawn(pty).unwrap();
 
     child.pty().write_all(b"foo\n").unwrap();
     // the pty will echo the written bytes back immediately, but the
@@ -33,9 +31,10 @@ fn test_cat_smol() {
     use smol::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
     let status = smol::block_on(async {
-        let mut child = smol::process::Command::new("cat")
-            .spawn_pty(Some(&pty_process::Size::new(24, 80)))
-            .unwrap();
+        let pty = pty_process::smol::Pty::new().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        let mut child =
+            pty_process::smol::Command::new("cat").spawn(pty).unwrap();
 
         child.pty().write_all(b"foo\n").await.unwrap();
         // the pty will echo the written bytes back immediately, but the
@@ -63,8 +62,10 @@ fn test_cat_async_std() {
     use async_std::io::ReadExt as _;
 
     let status = async_std::task::block_on(async {
-        let mut child = async_std::process::Command::new("cat")
-            .spawn_pty(Some(&pty_process::Size::new(24, 80)))
+        let pty = pty_process::async_std::Pty::new().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        let mut child = pty_process::async_std::Command::new("cat")
+            .spawn(pty)
             .unwrap();
 
         child.pty().write_all(b"foo\n").await.unwrap();
@@ -92,9 +93,10 @@ fn test_cat_tokio() {
     use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
     async fn async_test_cat_tokio() {
-        let mut child = tokio::process::Command::new("cat")
-            .spawn_pty(Some(&pty_process::Size::new(24, 80)))
-            .unwrap();
+        let pty = pty_process::tokio::Pty::new().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        let mut child =
+            pty_process::tokio::Command::new("cat").spawn(pty).unwrap();
 
         child.pty_mut().write_all(b"foo\n").await.unwrap();
         // the pty will echo the written bytes back immediately, but the

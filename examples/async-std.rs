@@ -7,7 +7,7 @@ mod main {
     use async_std::prelude::FutureExt as _;
 
     pub async fn run(
-        child: &pty_process::async_std::Child,
+        child: &mut pty_process::async_std::Child,
     ) -> std::result::Result<(), Box<dyn std::error::Error + '_>> {
         let _raw = super::raw_guard::RawGuard::new();
 
@@ -38,18 +38,18 @@ mod main {
                         stdout.flush().await.unwrap();
                     }
                     Err(e) => {
-                        // EIO means that the process closed the other
-                        // end of the pty
-                        if e.raw_os_error() != Some(libc::EIO) {
-                            eprintln!("pty read failed: {:?}", e);
-                        }
+                        eprintln!("pty read failed: {:?}", e);
                         break;
                     }
                 }
             }
         });
 
-        ex.run(input.race(output)).await;
+        let wait = async {
+            child.status_no_drop().await.unwrap();
+        };
+
+        ex.run(input.race(output).race(wait)).await;
 
         Ok(())
     }
@@ -57,15 +57,15 @@ mod main {
 
 #[cfg(feature = "backend-async-std")]
 fn main() {
-    use pty_process::Command as _;
     use std::os::unix::process::ExitStatusExt as _;
 
     let status = async_std::task::block_on(async {
-        let mut child = async_std::process::Command::new("sleep")
-            .args(&["500"])
-            .spawn_pty(Some(&pty_process::Size::new(24, 80)))
-            .unwrap();
-        main::run(&child).await.unwrap();
+        let pty = pty_process::async_std::Pty::new().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        let mut cmd = pty_process::async_std::Command::new("tac");
+        // cmd.args(&["500"]);
+        let mut child = cmd.spawn(pty).unwrap();
+        main::run(&mut child).await.unwrap();
         child.status().await.unwrap()
     });
     std::process::exit(

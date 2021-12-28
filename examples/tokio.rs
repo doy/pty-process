@@ -32,14 +32,13 @@ mod main {
                         stdout.flush().await.unwrap();
                     }
                     Err(e) => {
-                        // EIO means that the process closed the other
-                        // end of the pty
-                        if e.raw_os_error() != Some(libc::EIO) {
-                            eprintln!("pty read failed: {:?}", e);
-                        }
+                        eprintln!("pty read failed: {:?}", e);
                         break;
                     }
                 },
+                // _ = child.status_no_drop() => {
+                //     break;
+                // }
             }
         }
 
@@ -50,13 +49,13 @@ mod main {
 #[cfg(feature = "backend-tokio")]
 #[tokio::main]
 async fn main() {
-    use pty_process::Command as _;
     use std::os::unix::process::ExitStatusExt as _;
 
-    let mut child = tokio::process::Command::new("sleep")
-        .args(&["500"])
-        .spawn_pty(Some(&pty_process::Size::new(24, 80)))
-        .unwrap();
+    let pty = pty_process::tokio::Pty::new().unwrap();
+    pty.resize(pty_process::Size::new(24, 80)).unwrap();
+    let mut cmd = pty_process::tokio::Command::new("tac");
+    // cmd.args(&["500"]);
+    let mut child = cmd.spawn(pty).unwrap();
     main::run(&mut child).await.unwrap();
     let status = child.wait().await.unwrap();
     std::process::exit(

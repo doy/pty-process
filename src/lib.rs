@@ -63,7 +63,7 @@ pub use command::{Child, Command};
 mod error;
 pub use error::{Error, Result, Source};
 mod pty;
-pub use pty::Size;
+pub use pty::{Pty, Size};
 
 #[cfg(feature = "backend-async-std")]
 pub mod async_std;
