@@ -1,7 +1,7 @@
-use async_process::unix::CommandExt as _;
+use std::os::unix::process::CommandExt as _;
 
 pub struct Command {
-    inner: async_process::Command,
+    inner: std::process::Command,
     stdin: Option<std::process::Stdio>,
     stdout: Option<std::process::Stdio>,
     stderr: Option<std::process::Stdio>,
@@ -10,7 +10,7 @@ pub struct Command {
 impl Command {
     pub fn new<S: AsRef<std::ffi::OsStr>>(program: S) -> Self {
         Self {
-            inner: async_process::Command::new(program),
+            inner: std::process::Command::new(program),
             stdin: None,
             stdout: None,
             stderr: None,
@@ -95,7 +95,10 @@ impl Command {
         self
     }
 
-    pub fn spawn(&mut self, pty: crate::Pty) -> crate::Result<Child> {
+    pub fn spawn(
+        &mut self,
+        pty: crate::blocking::Pty,
+    ) -> crate::Result<Child> {
         let (stdin, stdout, stderr, pre_exec) = crate::sys::setup_subprocess(
             &pty,
             pty.pts().map_err(crate::error::spawn)?,
@@ -118,28 +121,28 @@ impl Command {
 }
 
 pub struct Child {
-    inner: async_process::Child,
-    pty: crate::Pty,
+    inner: std::process::Child,
+    pty: crate::blocking::Pty,
 }
 
 impl Child {
-    fn new(inner: async_process::Child, pty: crate::Pty) -> Self {
+    fn new(inner: std::process::Child, pty: crate::blocking::Pty) -> Self {
         Self { inner, pty }
     }
 
     #[must_use]
-    pub fn pty(&self) -> &crate::Pty {
+    pub fn pty(&self) -> &crate::blocking::Pty {
         &self.pty
     }
 
     #[must_use]
-    pub fn pty_mut(&mut self) -> &mut crate::Pty {
+    pub fn pty_mut(&mut self) -> &mut crate::blocking::Pty {
         &mut self.pty
     }
 }
 
 impl std::ops::Deref for Child {
-    type Target = async_process::Child;
+    type Target = std::process::Child;
 
     fn deref(&self) -> &Self::Target {
         &self.inner

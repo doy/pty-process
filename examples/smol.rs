@@ -1,11 +1,11 @@
 mod raw_guard;
 
-#[cfg(feature = "backend-smol")]
+#[cfg(feature = "async")]
 mod main {
     use smol::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
     pub async fn run(
-        child: &mut pty_process::smol::Child,
+        child: &pty_process::Child,
     ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _raw = super::raw_guard::RawGuard::new();
 
@@ -54,17 +54,18 @@ mod main {
     }
 }
 
-#[cfg(feature = "backend-smol")]
+#[cfg(feature = "async")]
 fn main() {
     use std::os::unix::process::ExitStatusExt as _;
 
     let status = smol::block_on(async {
-        let pty = pty_process::smol::Pty::new().unwrap();
+        let pty = pty_process::Pty::new().unwrap();
         pty.resize(pty_process::Size::new(24, 80)).unwrap();
-        let mut cmd = pty_process::smol::Command::new("tac");
-        // cmd.args(&["500"]);
-        let mut child = cmd.spawn(pty).unwrap();
-        main::run(&mut child).await.unwrap();
+        let mut child = pty_process::Command::new("tac")
+            // .args(&["500"])
+            .spawn(pty)
+            .unwrap();
+        main::run(&child).await.unwrap();
         child.status().await.unwrap()
     });
     std::process::exit(
@@ -74,7 +75,7 @@ fn main() {
     );
 }
 
-#[cfg(not(feature = "backend-smol"))]
+#[cfg(not(feature = "async"))]
 fn main() {
     unimplemented!()
 }

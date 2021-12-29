@@ -19,7 +19,7 @@ fn test_pipe_basic() {
     assert_eq!(output.stdout, b"10\n9\n8\n7\n6\n5\n4\n3\n2\n1\n");
 }
 
-#[cfg(feature = "backend-async-std")]
+#[cfg(feature = "todo")]
 // TODO (hangs because i'm still overriding the configured fds)
 // #[test]
 fn test_pipe_async() {

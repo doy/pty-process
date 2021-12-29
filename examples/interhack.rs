@@ -1,11 +1,11 @@
 mod raw_guard;
 
-#[cfg(feature = "backend-smol")]
+#[cfg(feature = "async")]
 mod main {
     use smol::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
     pub async fn run(
-        child: &mut pty_process::smol::Child,
+        child: &pty_process::Child,
     ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _raw = super::raw_guard::RawGuard::new();
 
@@ -71,11 +71,7 @@ mod main {
                         stdout.flush().await.unwrap();
                     }
                     Err(e) => {
-                        // EIO means that the process closed the other
-                        // end of the pty
-                        if e.raw_os_error() != Some(libc::EIO) {
-                            eprintln!("pty read failed: {:?}", e);
-                        }
+                        eprintln!("pty read failed: {:?}", e);
                         break;
                     }
                 }
@@ -93,7 +89,7 @@ mod main {
     }
 }
 
-#[cfg(feature = "backend-smol")]
+#[cfg(feature = "async")]
 fn main() {
     use std::os::unix::process::ExitStatusExt as _;
 
@@ -103,12 +99,11 @@ fn main() {
         (80, 24)
     };
     let status = smol::block_on(async {
-        let pty = pty_process::smol::Pty::new().unwrap();
+        let pty = pty_process::Pty::new().unwrap();
         pty.resize(pty_process::Size::new(h, w)).unwrap();
-        let mut child = pty_process::smol::Command::new("nethack")
-            .spawn(pty)
-            .unwrap();
-        main::run(&mut child).await.unwrap();
+        let mut child =
+            pty_process::Command::new("nethack").spawn(pty).unwrap();
+        main::run(&child).await.unwrap();
         child.status().await.unwrap()
     });
     std::process::exit(
@@ -118,7 +113,7 @@ fn main() {
     );
 }
 
-#[cfg(not(feature = "backend-smol"))]
+#[cfg(not(feature = "async"))]
 fn main() {
     unimplemented!()
 }

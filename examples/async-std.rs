@@ -1,13 +1,13 @@
 mod raw_guard;
 
-#[cfg(feature = "backend-async-std")]
+#[cfg(feature = "async")]
 mod main {
     use async_std::io::prelude::WriteExt as _;
     use async_std::io::ReadExt as _;
     use async_std::prelude::FutureExt as _;
 
     pub async fn run(
-        child: &mut pty_process::async_std::Child,
+        child: &pty_process::Child,
     ) -> std::result::Result<(), Box<dyn std::error::Error + '_>> {
         let _raw = super::raw_guard::RawGuard::new();
 
@@ -55,17 +55,18 @@ mod main {
     }
 }
 
-#[cfg(feature = "backend-async-std")]
+#[cfg(feature = "async")]
 fn main() {
     use std::os::unix::process::ExitStatusExt as _;
 
     let status = async_std::task::block_on(async {
-        let pty = pty_process::async_std::Pty::new().unwrap();
+        let pty = pty_process::Pty::new().unwrap();
         pty.resize(pty_process::Size::new(24, 80)).unwrap();
-        let mut cmd = pty_process::async_std::Command::new("tac");
-        // cmd.args(&["500"]);
-        let mut child = cmd.spawn(pty).unwrap();
-        main::run(&mut child).await.unwrap();
+        let mut child = pty_process::Command::new("tac")
+            // .args(&["500"])
+            .spawn(pty)
+            .unwrap();
+        main::run(&child).await.unwrap();
         child.status().await.unwrap()
     });
     std::process::exit(
@@ -75,7 +76,7 @@ fn main() {
     );
 }
 
-#[cfg(not(feature = "backend-async-std"))]
+#[cfg(not(feature = "async"))]
 fn main() {
     unimplemented!()
 }

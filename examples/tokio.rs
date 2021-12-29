@@ -1,11 +1,12 @@
 mod raw_guard;
 
-#[cfg(feature = "backend-tokio")]
+#[cfg(feature = "async")]
 mod main {
     use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
+    use tokio_util::compat::FuturesAsyncReadCompatExt as _;
 
     pub async fn run(
-        child: &mut pty_process::tokio::Child,
+        child: &pty_process::Child,
     ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _raw = super::raw_guard::RawGuard::new();
 
@@ -16,17 +17,18 @@ mod main {
         let mut stdout = tokio::io::stdout();
 
         loop {
+            let mut pty = child.pty().compat();
             tokio::select! {
                 bytes = stdin.read(&mut in_buf) => match bytes {
                     Ok(bytes) => {
-                        child.pty_mut().write_all(&in_buf[..bytes]).await.unwrap();
+                        pty.write_all(&in_buf[..bytes]).await.unwrap();
                     }
                     Err(e) => {
                         eprintln!("stdin read failed: {:?}", e);
                         break;
                     }
                 },
-                bytes = child.pty_mut().read(&mut out_buf) => match bytes {
+                bytes = pty.read(&mut out_buf) => match bytes {
                     Ok(bytes) => {
                         stdout.write_all(&out_buf[..bytes]).await.unwrap();
                         stdout.flush().await.unwrap();
@@ -36,9 +38,7 @@ mod main {
                         break;
                     }
                 },
-                // _ = child.status_no_drop() => {
-                //     break;
-                // }
+                _ = child.status_no_drop() => break,
             }
         }
 
@@ -46,18 +46,19 @@ mod main {
     }
 }
 
-#[cfg(feature = "backend-tokio")]
+#[cfg(feature = "async")]
 #[tokio::main]
 async fn main() {
     use std::os::unix::process::ExitStatusExt as _;
 
-    let pty = pty_process::tokio::Pty::new().unwrap();
+    let pty = pty_process::Pty::new().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut cmd = pty_process::tokio::Command::new("tac");
-    // cmd.args(&["500"]);
-    let mut child = cmd.spawn(pty).unwrap();
-    main::run(&mut child).await.unwrap();
-    let status = child.wait().await.unwrap();
+    let mut child = pty_process::Command::new("tac")
+        // .args(&["500"])
+        .spawn(pty)
+        .unwrap();
+    main::run(&child).await.unwrap();
+    let status = child.status().await.unwrap();
     std::process::exit(
         status
             .code()
@@ -65,7 +66,7 @@ async fn main() {
     );
 }
 
-#[cfg(not(feature = "backend-tokio"))]
+#[cfg(not(feature = "async"))]
 fn main() {
     unimplemented!()
 }

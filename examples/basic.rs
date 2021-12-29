@@ -1,11 +1,10 @@
 mod raw_guard;
 
-#[cfg(feature = "backend-std")]
 mod main {
     use std::io::{Read as _, Write as _};
     use std::os::unix::io::AsRawFd as _;
 
-    pub fn run(child: &mut pty_process::std::Child) {
+    pub fn run(child: &mut pty_process::blocking::Child) {
         let _raw = super::raw_guard::RawGuard::new();
         let mut buf = [0_u8; 4096];
         let pty = child.pty().as_raw_fd();
@@ -70,15 +69,15 @@ mod main {
     }
 }
 
-#[cfg(feature = "backend-std")]
 fn main() {
     use std::os::unix::process::ExitStatusExt as _;
 
-    let pty = pty_process::std::Pty::new().unwrap();
+    let pty = pty_process::blocking::Pty::new().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut cmd = pty_process::std::Command::new("tac");
-    // cmd.args(&["500"]);
-    let mut child = cmd.spawn(pty).unwrap();
+    let mut child = pty_process::blocking::Command::new("tac")
+        // .args(&["500"])
+        .spawn(pty)
+        .unwrap();
 
     main::run(&mut child);
 
@@ -88,9 +87,4 @@ fn main() {
             .code()
             .unwrap_or_else(|| status.signal().unwrap_or(0) + 128),
     );
-}
-
-#[cfg(not(feature = "backend-std"))]
-fn main() {
-    unimplemented!()
 }
