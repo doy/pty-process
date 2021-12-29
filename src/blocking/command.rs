@@ -99,11 +99,8 @@ impl Command {
         &mut self,
         pty: crate::blocking::Pty,
     ) -> crate::Result<Child> {
-        let (stdin, stdout, stderr, pre_exec) = crate::sys::setup_subprocess(
-            &pty,
-            pty.pts().map_err(crate::error::spawn)?,
-        )
-        .map_err(crate::error::spawn)?;
+        let (stdin, stdout, stderr, pre_exec) =
+            crate::sys::setup_subprocess(&pty, pty.pts()?)?;
 
         self.inner.stdin(self.stdin.take().unwrap_or(stdin));
         self.inner.stdout(self.stdout.take().unwrap_or(stdout));
@@ -114,7 +111,7 @@ impl Command {
         // async-signal-safe).
         unsafe { self.inner.pre_exec(pre_exec) };
 
-        let child = self.inner.spawn().map_err(crate::error::spawn)?;
+        let child = self.inner.spawn()?;
 
         Ok(Child::new(child, pty))
     }

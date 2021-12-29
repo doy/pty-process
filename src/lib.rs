@@ -12,7 +12,7 @@
 #![allow(clippy::type_complexity)]
 
 mod error;
-pub use error::{Error, Result, Source};
+pub use error::{Error, Result};
 mod types;
 pub use types::Size;
 

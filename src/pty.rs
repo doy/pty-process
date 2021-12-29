@@ -5,16 +5,13 @@ pub struct Pty {
 
 impl Pty {
     pub fn new() -> crate::Result<Self> {
-        let (pt, ptsname) =
-            crate::sys::create_pt().map_err(crate::error::create_pty)?;
-        let pt =
-            async_io::Async::new(pt).map_err(crate::error::create_pty)?;
+        let (pt, ptsname) = crate::sys::create_pt()?;
+        let pt = async_io::Async::new(pt)?;
         Ok(Self { pt, ptsname })
     }
 
     pub fn resize(&self, size: crate::Size) -> crate::error::Result<()> {
-        crate::sys::set_term_size(self, size)
-            .map_err(crate::error::set_term_size)
+        Ok(crate::sys::set_term_size(self, size)?)
     }
 
     pub(crate) fn pts(&self) -> std::io::Result<std::fs::File> {
