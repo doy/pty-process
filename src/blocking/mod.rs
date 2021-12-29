@@ -1,4 +1,4 @@
 mod command;
-pub use command::{Child, Command};
+pub use command::Command;
 mod pty;
 pub use pty::Pty;

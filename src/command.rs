@@ -95,9 +95,12 @@ impl Command {
         self
     }
 
-    pub fn spawn(&mut self, pty: crate::Pty) -> crate::Result<Child> {
+    pub fn spawn(
+        &mut self,
+        pty: &crate::Pty,
+    ) -> crate::Result<async_process::Child> {
         let (stdin, stdout, stderr, pre_exec) =
-            crate::sys::setup_subprocess(&pty, pty.pts()?)?;
+            crate::sys::setup_subprocess(pty, pty.pts()?)?;
 
         self.inner.stdin(self.stdin.take().unwrap_or(stdin));
         self.inner.stdout(self.stdout.take().unwrap_or(stdout));
@@ -108,43 +111,6 @@ impl Command {
         // async-signal-safe).
         unsafe { self.inner.pre_exec(pre_exec) };
 
-        let child = self.inner.spawn()?;
-
-        Ok(Child::new(child, pty))
-    }
-}
-
-pub struct Child {
-    inner: async_process::Child,
-    pty: crate::Pty,
-}
-
-impl Child {
-    fn new(inner: async_process::Child, pty: crate::Pty) -> Self {
-        Self { inner, pty }
-    }
-
-    #[must_use]
-    pub fn pty(&self) -> &crate::Pty {
-        &self.pty
-    }
-
-    #[must_use]
-    pub fn pty_mut(&mut self) -> &mut crate::Pty {
-        &mut self.pty
-    }
-}
-
-impl std::ops::Deref for Child {
-    type Target = async_process::Child;
-
-    fn deref(&self) -> &Self::Target {
-        &self.inner
-    }
-}
-
-impl std::ops::DerefMut for Child {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.inner
+        Ok(self.inner.spawn()?)
     }
 }

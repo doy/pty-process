@@ -5,10 +5,13 @@ mod main {
     use smol::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
     pub async fn run(
-        child: &pty_process::Child,
+        child: &async_process::Child,
+        pty: &pty_process::Pty,
     ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _raw = super::raw_guard::RawGuard::new();
 
+        let mut input_pty = pty;
+        let mut output_pty = pty;
         let ex = smol::Executor::new();
 
         let input = ex.spawn(async {
@@ -17,7 +20,7 @@ mod main {
             loop {
                 match stdin.read(&mut buf).await {
                     Ok(bytes) => {
-                        child.pty().write_all(&buf[..bytes]).await.unwrap();
+                        input_pty.write_all(&buf[..bytes]).await.unwrap();
                     }
                     Err(e) => {
                         eprintln!("stdin read failed: {:?}", e);
@@ -30,7 +33,7 @@ mod main {
             let mut buf = [0_u8; 4096];
             let mut stdout = smol::Unblock::new(std::io::stdout());
             loop {
-                match child.pty().read(&mut buf).await {
+                match output_pty.read(&mut buf).await {
                     Ok(bytes) => {
                         stdout.write_all(&buf[..bytes]).await.unwrap();
                         stdout.flush().await.unwrap();
@@ -63,9 +66,9 @@ fn main() {
         pty.resize(pty_process::Size::new(24, 80)).unwrap();
         let mut child = pty_process::Command::new("tac")
             // .args(&["500"])
-            .spawn(pty)
+            .spawn(&pty)
             .unwrap();
-        main::run(&child).await.unwrap();
+        main::run(&child, &pty).await.unwrap();
         child.status().await.unwrap()
     });
     std::process::exit(

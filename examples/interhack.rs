@@ -5,10 +5,13 @@ mod main {
     use smol::io::{AsyncReadExt as _, AsyncWriteExt as _};
 
     pub async fn run(
-        child: &pty_process::Child,
+        child: &async_process::Child,
+        pty: &pty_process::Pty,
     ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _raw = super::raw_guard::RawGuard::new();
 
+        let mut input_pty = pty;
+        let mut output_pty = pty;
         let ex = smol::Executor::new();
 
         let input = ex.spawn(async {
@@ -21,24 +24,18 @@ mod main {
                         if buf[..bytes].contains(&5u8) {
                             for byte in buf[..bytes].iter() {
                                 match byte {
-                                    5u8 => child
-                                        .pty()
+                                    5u8 => input_pty
                                         .write_all(b"E-  Elbereth\n")
                                         .await
                                         .unwrap(),
-                                    _ => child
-                                        .pty()
+                                    _ => input_pty
                                         .write_all(&[*byte])
                                         .await
                                         .unwrap(),
                                 }
                             }
                         } else {
-                            child
-                                .pty()
-                                .write_all(&buf[..bytes])
-                                .await
-                                .unwrap();
+                            input_pty.write_all(&buf[..bytes]).await.unwrap();
                         }
                     }
                     Err(e) => {
@@ -54,7 +51,7 @@ mod main {
             #[allow(clippy::trivial_regex)]
             let re = regex::bytes::Regex::new("Elbereth").unwrap();
             loop {
-                match child.pty().read(&mut buf).await {
+                match output_pty.read(&mut buf).await {
                     Ok(bytes) => {
                         // highlight successful Elbereths
                         if re.is_match(&buf[..bytes]) {
@@ -102,8 +99,8 @@ fn main() {
         let pty = pty_process::Pty::new().unwrap();
         pty.resize(pty_process::Size::new(h, w)).unwrap();
         let mut child =
-            pty_process::Command::new("nethack").spawn(pty).unwrap();
-        main::run(&child).await.unwrap();
+            pty_process::Command::new("nethack").spawn(&pty).unwrap();
+        main::run(&child, &pty).await.unwrap();
         child.status().await.unwrap()
     });
     std::process::exit(

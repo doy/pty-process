@@ -23,7 +23,7 @@ pub mod blocking;
 #[cfg(feature = "async")]
 mod command;
 #[cfg(feature = "async")]
-pub use command::{Child, Command};
+pub use command::Command;
 #[cfg(feature = "async")]
 mod pty;
 #[cfg(feature = "async")]

@@ -6,7 +6,8 @@ mod main {
     use tokio_util::compat::FuturesAsyncReadCompatExt as _;
 
     pub async fn run(
-        child: &pty_process::Child,
+        child: &async_process::Child,
+        pty: &pty_process::Pty,
     ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _raw = super::raw_guard::RawGuard::new();
 
@@ -15,9 +16,9 @@ mod main {
 
         let mut stdin = tokio::io::stdin();
         let mut stdout = tokio::io::stdout();
+        let mut pty = pty.compat();
 
         loop {
-            let mut pty = child.pty().compat();
             tokio::select! {
                 bytes = stdin.read(&mut in_buf) => match bytes {
                     Ok(bytes) => {
@@ -55,9 +56,9 @@ async fn main() {
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::Command::new("tac")
         // .args(&["500"])
-        .spawn(pty)
+        .spawn(&pty)
         .unwrap();
-    main::run(&child).await.unwrap();
+    main::run(&child, &pty).await.unwrap();
     let status = child.status().await.unwrap();
     std::process::exit(
         status
