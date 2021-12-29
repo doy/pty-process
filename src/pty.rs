@@ -10,7 +10,7 @@ impl Pty {
         Ok(Self { pt, ptsname })
     }
 
-    pub fn resize(&self, size: crate::Size) -> crate::error::Result<()> {
+    pub fn resize(&self, size: crate::Size) -> crate::Result<()> {
         Ok(crate::sys::set_term_size(self, size)?)
     }
 
