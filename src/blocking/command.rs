@@ -5,6 +5,9 @@ pub struct Command {
     stdin: Option<std::process::Stdio>,
     stdout: Option<std::process::Stdio>,
     stderr: Option<std::process::Stdio>,
+    pre_exec: Option<
+        Box<dyn FnMut() -> std::io::Result<()> + Send + Sync + 'static>,
+    >,
 }
 
 impl Command {
@@ -14,6 +17,7 @@ impl Command {
             stdin: None,
             stdout: None,
             stderr: None,
+            pre_exec: None,
         }
     }
 
@@ -99,7 +103,7 @@ impl Command {
         &mut self,
         pty: &crate::blocking::Pty,
     ) -> crate::Result<std::process::Child> {
-        let (stdin, stdout, stderr, pre_exec) =
+        let (stdin, stdout, stderr, mut pre_exec) =
             crate::sys::setup_subprocess(pty, pty.pts()?)?;
 
         self.inner.stdin(self.stdin.take().unwrap_or(stdin));
@@ -109,8 +113,44 @@ impl Command {
         // safe because setsid() and close() are async-signal-safe functions
         // and ioctl() is a raw syscall (which is inherently
         // async-signal-safe).
-        unsafe { self.inner.pre_exec(pre_exec) };
+        if let Some(mut custom) = self.pre_exec.take() {
+            unsafe {
+                self.inner.pre_exec(move || {
+                    pre_exec()?;
+                    custom()?;
+                    Ok(())
+                })
+            };
+        } else {
+            unsafe { self.inner.pre_exec(pre_exec) };
+        }
 
         Ok(self.inner.spawn()?)
+    }
+
+    pub fn uid(&mut self, id: u32) -> &mut Self {
+        self.inner.uid(id);
+        self
+    }
+
+    pub fn gid(&mut self, id: u32) -> &mut Self {
+        self.inner.gid(id);
+        self
+    }
+
+    pub unsafe fn pre_exec<F>(&mut self, f: F) -> &mut Self
+    where
+        F: FnMut() -> std::io::Result<()> + Send + Sync + 'static,
+    {
+        self.pre_exec = Some(Box::new(f));
+        self
+    }
+
+    pub fn arg0<S>(&mut self, arg: S) -> &mut Self
+    where
+        S: AsRef<std::ffi::OsStr>,
+    {
+        self.inner.arg0(arg);
+        self
     }
 }
