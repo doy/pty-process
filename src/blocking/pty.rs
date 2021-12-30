@@ -1,24 +1,24 @@
 pub struct Pty {
     pt: std::fs::File,
-    ptsname: std::path::PathBuf,
+    pts: std::fs::File,
 }
 
 impl Pty {
     pub fn new() -> crate::Result<Self> {
         let (pt, ptsname) = crate::sys::create_pt()?;
-        Ok(Self { pt, ptsname })
+        let pts = std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(&ptsname)?;
+        Ok(Self { pt, pts })
     }
 
     pub fn resize(&self, size: crate::Size) -> crate::Result<()> {
         Ok(crate::sys::set_term_size(self, size)?)
     }
 
-    pub(crate) fn pts(&self) -> std::io::Result<std::fs::File> {
-        let fh = std::fs::OpenOptions::new()
-            .read(true)
-            .write(true)
-            .open(&self.ptsname)?;
-        Ok(fh)
+    pub(crate) fn pts(&self) -> &std::fs::File {
+        &self.pts
     }
 }
 

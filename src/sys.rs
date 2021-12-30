@@ -40,7 +40,7 @@ pub fn set_term_size(
 
 pub fn setup_subprocess(
     pt: &impl std::os::unix::io::AsRawFd,
-    pts: impl std::os::unix::io::IntoRawFd,
+    pts: &impl std::os::unix::io::AsRawFd,
 ) -> nix::Result<(
     std::process::Stdio,
     std::process::Stdio,
@@ -48,7 +48,7 @@ pub fn setup_subprocess(
     impl FnMut() -> std::io::Result<()>,
 )> {
     let pt_fd = pt.as_raw_fd();
-    let pts_fd = pts.into_raw_fd();
+    let pts_fd = pts.as_raw_fd();
 
     let stdin = nix::unistd::dup(pts_fd)?;
     let stdout = nix::unistd::dup(pts_fd)?;
