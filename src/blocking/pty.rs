@@ -17,7 +17,8 @@ impl Pty {
         Ok(crate::sys::set_term_size(self, size)?)
     }
 
-    pub(crate) fn pts(&self) -> &std::fs::File {
+    #[must_use]
+    pub fn pts(&self) -> &std::fs::File {
         &self.pts
     }
 }
