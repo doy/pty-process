@@ -2,7 +2,9 @@ use std::os::unix::io::{FromRawFd as _, IntoRawFd as _};
 
 pub fn create_pt() -> nix::Result<(std::fs::File, std::path::PathBuf)> {
     let pt = nix::pty::posix_openpt(
-        nix::fcntl::OFlag::O_RDWR | nix::fcntl::OFlag::O_NOCTTY,
+        nix::fcntl::OFlag::O_RDWR
+            | nix::fcntl::OFlag::O_NOCTTY
+            | nix::fcntl::OFlag::O_CLOEXEC,
     )?;
     nix::pty::grantpt(&pt)?;
     nix::pty::unlockpt(&pt)?;
@@ -40,19 +42,20 @@ pub fn set_term_size(
 
 pub fn setup_subprocess(
     pts: &impl std::os::unix::io::AsRawFd,
-    pt: Option<&impl std::os::unix::io::AsRawFd>,
 ) -> nix::Result<(
     std::process::Stdio,
     std::process::Stdio,
     std::process::Stdio,
     impl FnMut() -> std::io::Result<()>,
 )> {
-    let pt_fd = pt.map(std::os::unix::io::AsRawFd::as_raw_fd);
     let pts_fd = pts.as_raw_fd();
 
-    let stdin = nix::unistd::dup(pts_fd)?;
-    let stdout = nix::unistd::dup(pts_fd)?;
-    let stderr = nix::unistd::dup(pts_fd)?;
+    let stdin =
+        nix::fcntl::fcntl(pts_fd, nix::fcntl::FcntlArg::F_DUPFD_CLOEXEC(0))?;
+    let stdout =
+        nix::fcntl::fcntl(pts_fd, nix::fcntl::FcntlArg::F_DUPFD_CLOEXEC(0))?;
+    let stderr =
+        nix::fcntl::fcntl(pts_fd, nix::fcntl::FcntlArg::F_DUPFD_CLOEXEC(0))?;
 
     // Safety: these file descriptors were all just returned from dup, so they
     // must be valid
@@ -64,22 +67,7 @@ pub fn setup_subprocess(
             nix::unistd::setsid()?;
             set_controlling_terminal(pts_fd)?;
 
-            // in the parent, destructors will handle closing these file
-            // descriptors (other than pt, used by the parent to
-            // communicate with the child) when the function ends, but in
-            // the child, we end by calling exec(), which doesn't call
-            // destructors.
-
-            if let Some(pt_fd) = pt_fd {
-                nix::unistd::close(pt_fd)?;
-            }
-            nix::unistd::close(pts_fd)?;
-            // at this point, stdin/stdout/stderr have already been
-            // reopened as fds 0/1/2 in the child, so we can (and should)
-            // close the originals
-            nix::unistd::close(stdin)?;
-            nix::unistd::close(stdout)?;
-            nix::unistd::close(stderr)?;
+            // no need to close anything, since we set cloexec everywhere
 
             Ok(())
         },

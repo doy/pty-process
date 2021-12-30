@@ -104,15 +104,14 @@ impl Command {
         pty: &crate::blocking::Pty,
     ) -> crate::Result<std::process::Child> {
         let (stdin, stdout, stderr, mut pre_exec) =
-            crate::sys::setup_subprocess(pty.pts(), Some(pty))?;
+            crate::sys::setup_subprocess(pty.pts())?;
 
         self.inner.stdin(self.stdin.take().unwrap_or(stdin));
         self.inner.stdout(self.stdout.take().unwrap_or(stdout));
         self.inner.stderr(self.stderr.take().unwrap_or(stderr));
 
-        // safe because setsid() and close() are async-signal-safe functions
-        // and ioctl() is a raw syscall (which is inherently
-        // async-signal-safe).
+        // safe because setsid() is an async-signal-safe function and ioctl()
+        // is a raw syscall (which is inherently async-signal-safe).
         if let Some(mut custom) = self.pre_exec.take() {
             unsafe {
                 self.inner.pre_exec(move || {
