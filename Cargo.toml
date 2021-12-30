@@ -23,6 +23,7 @@ futures-io = { version = "0.3.19", optional = true }
 [dev-dependencies]
 async-executor = "1.4.1"
 async-std = { version = "1.10.0", features = ["unstable"] }
+futures = "0.3.19"
 regex = "1.5.4"
 smol = "1.2.5"
 term_size = "0.3.2"

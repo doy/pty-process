@@ -1,7 +1,9 @@
+mod helpers;
+
 #[cfg(feature = "async")]
 #[test]
 fn test_fds_async() {
-    use async_std::io::prelude::BufReadExt as _;
+    use futures::stream::StreamExt as _;
 
     check_open_fds(&[0, 1, 2]);
 
@@ -14,12 +16,10 @@ fn test_fds_async() {
             .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")
             .spawn(&pty)
             .unwrap();
-        let mut buf = vec![];
-        async_std::io::BufReader::new(&pty)
-            .read_until(b'\n', &mut buf)
-            .await
-            .unwrap();
-        assert_eq!(&buf, b"012\r\n");
+
+        let mut output = helpers::output_async(&pty);
+        assert_eq!(output.next().await.unwrap(), "012\r\n");
+
         let status = child.status().await.unwrap();
         assert_eq!(status.code().unwrap(), 0);
     });
@@ -33,14 +33,13 @@ fn test_fds_async() {
             .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")
             .spawn(&pty)
             .unwrap();
-        let mut buf = vec![];
-        async_std::io::BufReader::new(&pty)
-            .read_until(b'\n', &mut buf)
-            .await
-            .unwrap();
-        assert_eq!(&buf, b"012\r\n");
+
+        let mut output = helpers::output_async(&pty);
+        assert_eq!(output.next().await.unwrap(), "012\r\n");
+
         let status = child.status().await.unwrap();
         assert_eq!(status.code().unwrap(), 0);
+        drop(output);
         drop(pty);
 
         check_open_fds(&fds);
@@ -56,14 +55,13 @@ fn test_fds_async() {
             .stderr(Some(std::process::Stdio::null()))
             .spawn(&pty)
             .unwrap();
-        let mut buf = vec![];
-        async_std::io::BufReader::new(&pty)
-            .read_until(b'\n', &mut buf)
-            .await
-            .unwrap();
-        assert_eq!(&buf, b"012\r\n");
+
+        let mut output = helpers::output_async(&pty);
+        assert_eq!(output.next().await.unwrap(), "012\r\n");
+
         let status = child.status().await.unwrap();
         assert_eq!(status.code().unwrap(), 0);
+        drop(output);
         drop(pty);
 
         check_open_fds(&fds);

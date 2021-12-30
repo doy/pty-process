@@ -1,7 +1,7 @@
+mod helpers;
+
 #[test]
 fn test_fds() {
-    use std::io::BufRead as _;
-
     check_open_fds();
 
     let pty = pty_process::blocking::Pty::new().unwrap();
@@ -10,11 +10,10 @@ fn test_fds() {
         .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")
         .spawn(&pty)
         .unwrap();
-    let mut buf = vec![];
-    std::io::BufReader::new(&pty)
-        .read_until(b'\n', &mut buf)
-        .unwrap();
-    assert_eq!(&buf, b"012\r\n");
+
+    let mut output = helpers::output(&pty);
+    assert_eq!(output.next().unwrap(), "012\r\n");
+
     let status = child.wait().unwrap();
     assert_eq!(status.code().unwrap(), 0);
     drop(pty);
@@ -27,11 +26,10 @@ fn test_fds() {
         .stderr(Some(std::process::Stdio::null()))
         .spawn(&pty)
         .unwrap();
-    let mut buf = vec![];
-    std::io::BufReader::new(&pty)
-        .read_until(b'\n', &mut buf)
-        .unwrap();
-    assert_eq!(&buf, b"012\r\n");
+
+    let mut output = helpers::output(&pty);
+    assert_eq!(output.next().unwrap(), "012\r\n");
+
     let status = child.wait().unwrap();
     assert_eq!(status.code().unwrap(), 0);
     drop(pty);
