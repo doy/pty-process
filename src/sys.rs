@@ -46,7 +46,6 @@ pub fn setup_subprocess(
     std::process::Stdio,
     std::process::Stdio,
     std::process::Stdio,
-    impl FnMut() -> std::io::Result<()>,
 )> {
     let pts_fd = pts.as_raw_fd();
 
@@ -63,15 +62,18 @@ pub fn setup_subprocess(
         unsafe { std::process::Stdio::from_raw_fd(stdin) },
         unsafe { std::process::Stdio::from_raw_fd(stdout) },
         unsafe { std::process::Stdio::from_raw_fd(stderr) },
-        move || {
-            nix::unistd::setsid()?;
-            set_controlling_terminal(pts_fd)?;
-
-            // no need to close anything, since we set cloexec everywhere
-
-            Ok(())
-        },
     ))
+}
+
+pub fn session_leader(
+    pts: &impl std::os::unix::io::AsRawFd,
+) -> impl FnMut() -> std::io::Result<()> {
+    let pts_fd = pts.as_raw_fd();
+    move || {
+        nix::unistd::setsid()?;
+        set_controlling_terminal(pts_fd)?;
+        Ok(())
+    }
 }
 
 fn set_controlling_terminal(fd: std::os::unix::io::RawFd) -> nix::Result<()> {
