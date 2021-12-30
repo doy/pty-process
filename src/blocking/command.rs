@@ -104,7 +104,7 @@ impl Command {
         pty: &crate::blocking::Pty,
     ) -> crate::Result<std::process::Child> {
         let (stdin, stdout, stderr, mut pre_exec) =
-            crate::sys::setup_subprocess(pty, pty.pts())?;
+            crate::sys::setup_subprocess(pty.pts(), Some(pty))?;
 
         self.inner.stdin(self.stdin.take().unwrap_or(stdin));
         self.inner.stdout(self.stdout.take().unwrap_or(stdout));

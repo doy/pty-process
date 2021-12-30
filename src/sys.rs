@@ -39,15 +39,15 @@ pub fn set_term_size(
 }
 
 pub fn setup_subprocess(
-    pt: &impl std::os::unix::io::AsRawFd,
     pts: &impl std::os::unix::io::AsRawFd,
+    pt: Option<&impl std::os::unix::io::AsRawFd>,
 ) -> nix::Result<(
     std::process::Stdio,
     std::process::Stdio,
     std::process::Stdio,
     impl FnMut() -> std::io::Result<()>,
 )> {
-    let pt_fd = pt.as_raw_fd();
+    let pt_fd = pt.map(std::os::unix::io::AsRawFd::as_raw_fd);
     let pts_fd = pts.as_raw_fd();
 
     let stdin = nix::unistd::dup(pts_fd)?;
@@ -70,7 +70,9 @@ pub fn setup_subprocess(
             // the child, we end by calling exec(), which doesn't call
             // destructors.
 
-            nix::unistd::close(pt_fd)?;
+            if let Some(pt_fd) = pt_fd {
+                nix::unistd::close(pt_fd)?;
+            }
             nix::unistd::close(pts_fd)?;
             // at this point, stdin/stdout/stderr have already been
             // reopened as fds 0/1/2 in the child, so we can (and should)
