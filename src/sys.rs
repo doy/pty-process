@@ -76,32 +76,6 @@ pub fn session_leader(
     }
 }
 
-pub fn set_process_group_child(
-    pg: Option<u32>,
-) -> impl FnMut() -> std::io::Result<()> {
-    move || {
-        nix::unistd::setpgid(
-            nix::unistd::Pid::from_raw(0),
-            pg.map_or(nix::unistd::Pid::from_raw(0), |pid| {
-                nix::unistd::Pid::from_raw(pid.try_into().unwrap())
-            }),
-        )?;
-        Ok(())
-    }
-}
-
-pub fn set_process_group_parent(
-    pid: u32,
-    pg: Option<u32>,
-) -> nix::Result<()> {
-    nix::unistd::setpgid(
-        nix::unistd::Pid::from_raw(pid.try_into().unwrap()),
-        pg.map_or(nix::unistd::Pid::from_raw(0), |pid| {
-            nix::unistd::Pid::from_raw(pid.try_into().unwrap())
-        }),
-    )
-}
-
 fn set_controlling_terminal(fd: std::os::unix::io::RawFd) -> nix::Result<()> {
     // Safety: std::fs::File is required to contain a valid file descriptor
     unsafe { set_controlling_terminal_unsafe(fd, std::ptr::null()) }

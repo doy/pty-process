@@ -128,30 +128,6 @@ impl Command {
         Ok(self.inner.spawn()?)
     }
 
-    pub fn spawn_pg(
-        &mut self,
-        pg: Option<u32>,
-    ) -> crate::Result<async_process::Child> {
-        let mut set_process_group = crate::sys::set_process_group_child(pg);
-        // Safety: setpgid() is an async-signal-safe function and ioctl() is a
-        // raw syscall (which is inherently async-signal-safe).
-        if let Some(mut custom) = self.pre_exec.take() {
-            unsafe {
-                self.inner.pre_exec(move || {
-                    set_process_group()?;
-                    custom()?;
-                    Ok(())
-                })
-            };
-        } else {
-            unsafe { self.inner.pre_exec(set_process_group) };
-        }
-
-        let child = self.inner.spawn()?;
-        crate::sys::set_process_group_parent(child.id(), pg)?;
-        Ok(child)
-    }
-
     pub fn uid(&mut self, id: u32) -> &mut Self {
         self.inner.uid(id);
         self
