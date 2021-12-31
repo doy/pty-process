@@ -1,4 +1,4 @@
-/// Source for errors in this crate
+/// Error type for errors from this crate
 #[derive(Debug)]
 pub enum Error {
     /// error came from std::io::Error
