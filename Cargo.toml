@@ -36,4 +36,4 @@ default = []
 async = ["async-io", "async-process", "futures-io"]
 
 [patch.crates-io]
-async-process = { git = "https://github.com/doy/async-process", branch = "status-drop" }
+async-process = { git = "https://github.com/doy/async-process" }
