@@ -52,7 +52,7 @@ fn test_fds_async() {
         pty.resize(pty_process::Size::new(24, 80)).unwrap();
         let mut child = pty_process::Command::new("perl")
             .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")
-            .stderr(Some(std::process::Stdio::null()))
+            .stderr(std::process::Stdio::null())
             .spawn(&pty)
             .unwrap();
 

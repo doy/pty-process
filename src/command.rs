@@ -2,9 +2,10 @@ use async_process::unix::CommandExt as _;
 
 pub struct Command {
     inner: async_process::Command,
-    stdin: Option<std::process::Stdio>,
-    stdout: Option<std::process::Stdio>,
-    stderr: Option<std::process::Stdio>,
+    stdin: bool,
+    stdout: bool,
+    stderr: bool,
+    pre_exec_set: bool,
     pre_exec: Option<
         Box<dyn FnMut() -> std::io::Result<()> + Send + Sync + 'static>,
     >,
@@ -14,9 +15,10 @@ impl Command {
     pub fn new<S: AsRef<std::ffi::OsStr>>(program: S) -> Self {
         Self {
             inner: async_process::Command::new(program),
-            stdin: None,
-            stdout: None,
-            stderr: None,
+            stdin: false,
+            stdout: false,
+            stderr: false,
+            pre_exec_set: false,
             pre_exec: None,
         }
     }
@@ -77,25 +79,28 @@ impl Command {
 
     pub fn stdin<T: Into<std::process::Stdio>>(
         &mut self,
-        cfg: Option<T>,
+        cfg: T,
     ) -> &mut Self {
-        self.stdin = cfg.map(Into::into);
+        self.stdin = true;
+        self.inner.stdin(cfg);
         self
     }
 
     pub fn stdout<T: Into<std::process::Stdio>>(
         &mut self,
-        cfg: Option<T>,
+        cfg: T,
     ) -> &mut Self {
-        self.stdout = cfg.map(Into::into);
+        self.stdout = true;
+        self.inner.stdout(cfg);
         self
     }
 
     pub fn stderr<T: Into<std::process::Stdio>>(
         &mut self,
-        cfg: Option<T>,
+        cfg: T,
     ) -> &mut Self {
-        self.stderr = cfg.map(Into::into);
+        self.stderr = true;
+        self.inner.stderr(cfg);
         self
     }
 
@@ -106,9 +111,15 @@ impl Command {
         let pts = pty.pts();
         let (stdin, stdout, stderr) = crate::sys::setup_subprocess(pts)?;
 
-        self.inner.stdin(self.stdin.take().unwrap_or(stdin));
-        self.inner.stdout(self.stdout.take().unwrap_or(stdout));
-        self.inner.stderr(self.stderr.take().unwrap_or(stderr));
+        if !self.stdin {
+            self.inner.stdin(stdin);
+        }
+        if !self.stdout {
+            self.inner.stdout(stdout);
+        }
+        if !self.stderr {
+            self.inner.stderr(stderr);
+        }
 
         let mut session_leader = crate::sys::session_leader(pts);
         // Safety: setsid() is an async-signal-safe function and ioctl() is a
@@ -121,9 +132,10 @@ impl Command {
                     Ok(())
                 })
             };
-        } else {
+        } else if !self.pre_exec_set {
             unsafe { self.inner.pre_exec(session_leader) };
         }
+        self.pre_exec_set = true;
 
         Ok(self.inner.spawn()?)
     }
