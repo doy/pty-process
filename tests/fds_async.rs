@@ -7,61 +7,86 @@ fn test_fds_async() {
 
     check_open_fds(&[0, 1, 2]);
 
-    // run once to ensure all of the fds in the async_std machinery are
+    let rt = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap();
+
+    // run once to ensure all of the fds in the tokio machinery are
     // allocated
-    async_std::task::block_on(async {
-        let pty = pty_process::Pty::new().unwrap();
+    rt.block_on(async {
+        let mut pty = pty_process::Pty::new().unwrap();
+        let pts = pty.pts().unwrap();
         pty.resize(pty_process::Size::new(24, 80)).unwrap();
         let mut child = pty_process::Command::new("perl")
-            .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")
-            .spawn(&pty)
+            .arg(
+                "-Efor my $fd (0..255) { \
+                open my $fh, \"<&=$fd\"; \
+                print $fd if stat $fh \
+                }; \
+                say",
+            )
+            .spawn(&pts)
             .unwrap();
 
-        let mut output = helpers::output_async(&pty);
+        let (pty_r, _) = pty.split();
+        let mut output = helpers::output_async(pty_r);
         assert_eq!(output.next().await.unwrap(), "012\r\n");
 
-        let status = child.status().await.unwrap();
+        let status = child.wait().await.unwrap();
         assert_eq!(status.code().unwrap(), 0);
     });
 
-    async_std::task::block_on(async {
+    rt.block_on(async {
         let fds = get_open_fds();
 
-        let pty = pty_process::Pty::new().unwrap();
+        let mut pty = pty_process::Pty::new().unwrap();
+        let pts = pty.pts().unwrap();
         pty.resize(pty_process::Size::new(24, 80)).unwrap();
         let mut child = pty_process::Command::new("perl")
-            .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")
-            .spawn(&pty)
+            .arg(
+                "-Efor my $fd (0..255) { \
+                open my $fh, \"<&=$fd\"; \
+                print $fd if stat $fh \
+                }; \
+                say",
+            )
+            .spawn(&pts)
             .unwrap();
 
-        let mut output = helpers::output_async(&pty);
+        let (pty_r, _) = pty.split();
+        let mut output = helpers::output_async(pty_r);
         assert_eq!(output.next().await.unwrap(), "012\r\n");
 
-        let status = child.status().await.unwrap();
+        let status = child.wait().await.unwrap();
         assert_eq!(status.code().unwrap(), 0);
         drop(output);
+        drop(pts);
         drop(pty);
 
         check_open_fds(&fds);
     });
 
-    async_std::task::block_on(async {
+    rt.block_on(async {
         let fds = get_open_fds();
 
-        let pty = pty_process::Pty::new().unwrap();
+        let mut pty = pty_process::Pty::new().unwrap();
+        let pts = pty.pts().unwrap();
         pty.resize(pty_process::Size::new(24, 80)).unwrap();
         let mut child = pty_process::Command::new("perl")
             .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")
             .stderr(std::process::Stdio::null())
-            .spawn(&pty)
+            .spawn(&pts)
             .unwrap();
 
-        let mut output = helpers::output_async(&pty);
+        let (pty_r, _) = pty.split();
+        let mut output = helpers::output_async(pty_r);
         assert_eq!(output.next().await.unwrap(), "012\r\n");
 
-        let status = child.status().await.unwrap();
+        let status = child.wait().await.unwrap();
         assert_eq!(status.code().unwrap(), 0);
         drop(output);
+        drop(pts);
         drop(pty);
 
         check_open_fds(&fds);

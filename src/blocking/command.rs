@@ -117,14 +117,13 @@ impl Command {
     }
 
     /// Executes the command as a child process via
-    /// [`std::process::Command::spawn`], and attaches the given `pty` to
-    /// that child. The pty will be attached to all of `stdin`, `stdout`, and
-    /// `stderr` of the child, unless those file descriptors were previously
-    /// overridden through calls to [`stdin`](Self::stdin),
-    /// [`stdout`](Self::stdout), or [`stderr`](Self::stderr). The newly
-    /// created child process will also be made the session leader of a new
-    /// session, and will have the given `pty` instance set as its controlling
-    /// terminal.
+    /// [`std::process::Command::spawn`] on the given pty. The pty will be
+    /// attached to all of `stdin`, `stdout`, and `stderr` of the child,
+    /// unless those file descriptors were previously overridden through calls
+    /// to [`stdin`](Self::stdin), [`stdout`](Self::stdout), or
+    /// [`stderr`](Self::stderr). The newly created child process will also be
+    /// made the session leader of a new session, and will have the given
+    /// pty set as its controlling terminal.
     ///
     /// # Errors
     /// Returns an error if we fail to allocate new file descriptors for
@@ -134,10 +133,9 @@ impl Command {
     /// session leader or set its controlling terminal.
     pub fn spawn(
         &mut self,
-        pty: &crate::blocking::Pty,
+        pts: &crate::blocking::Pts,
     ) -> crate::Result<std::process::Child> {
-        let pts = pty.pts();
-        let (stdin, stdout, stderr) = crate::sys::setup_subprocess(pts)?;
+        let (stdin, stdout, stderr) = pts.0.setup_subprocess()?;
 
         if !self.stdin {
             self.inner.stdin(stdin);
@@ -149,7 +147,7 @@ impl Command {
             self.inner.stderr(stderr);
         }
 
-        let mut session_leader = crate::sys::session_leader(pts);
+        let mut session_leader = pts.0.session_leader();
         // Safety: setsid() is an async-signal-safe function and ioctl() is a
         // raw syscall (which is inherently async-signal-safe).
         if let Some(mut custom) = self.pre_exec.take() {
@@ -190,6 +188,7 @@ impl Command {
         self
     }
 
+    /// See [`std::os::unix::process::CommandExt::arg0`]
     pub fn arg0<S>(&mut self, arg: S) -> &mut Self
     where
         S: AsRef<std::ffi::OsStr>,

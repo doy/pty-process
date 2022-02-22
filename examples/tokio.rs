@@ -3,11 +3,10 @@ mod raw_guard;
 #[cfg(feature = "async")]
 mod main {
     use tokio::io::{AsyncReadExt as _, AsyncWriteExt as _};
-    use tokio_util::compat::FuturesAsyncReadCompatExt as _;
 
     pub async fn run(
-        child: &async_process::Child,
-        pty: &pty_process::Pty,
+        child: &mut tokio::process::Child,
+        pty: &mut pty_process::Pty,
     ) -> std::result::Result<(), Box<dyn std::error::Error>> {
         let _raw = super::raw_guard::RawGuard::new();
 
@@ -16,7 +15,6 @@ mod main {
 
         let mut stdin = tokio::io::stdin();
         let mut stdout = tokio::io::stdout();
-        let mut pty = pty.compat();
 
         loop {
             tokio::select! {
@@ -39,7 +37,7 @@ mod main {
                         break;
                     }
                 },
-                _ = child.status_no_drop() => break,
+                _ = child.wait() => break,
             }
         }
 
@@ -52,14 +50,15 @@ mod main {
 async fn main() {
     use std::os::unix::process::ExitStatusExt as _;
 
-    let pty = pty_process::Pty::new().unwrap();
+    let mut pty = pty_process::Pty::new().unwrap();
+    let pts = pty.pts().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::Command::new("tac")
         // .args(&["500"])
-        .spawn(&pty)
+        .spawn(&pts)
         .unwrap();
-    main::run(&child, &pty).await.unwrap();
-    let status = child.status().await.unwrap();
+    main::run(&mut child, &mut pty).await.unwrap();
+    let status = child.wait().await.unwrap();
     std::process::exit(
         status
             .code()

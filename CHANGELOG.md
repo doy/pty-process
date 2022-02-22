@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+* Complete rewrite of the API
+* Tokio is now the only supported backend, enabled via the `async` feature
+
 ## [0.2.0] - 2021-12-15
 
 ### Changed

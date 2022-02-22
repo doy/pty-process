@@ -5,6 +5,9 @@ pub enum Error {
     Io(std::io::Error),
     /// error came from nix::Error
     Nix(nix::Error),
+    /// unsplit was called on halves of two different ptys
+    #[cfg(feature = "async")]
+    Unsplit(crate::OwnedReadPty, crate::OwnedWritePty),
 }
 
 impl std::fmt::Display for Error {
@@ -12,6 +15,10 @@ impl std::fmt::Display for Error {
         match self {
             Self::Io(e) => write!(f, "{}", e),
             Self::Nix(e) => write!(f, "{}", e),
+            #[cfg(feature = "async")]
+            Self::Unsplit(..) => {
+                write!(f, "unsplit called on halves of two different ptys")
+            }
         }
     }
 }
@@ -33,6 +40,8 @@ impl std::error::Error for Error {
         match self {
             Self::Io(e) => Some(e),
             Self::Nix(e) => Some(e),
+            #[cfg(feature = "async")]
+            Self::Unsplit(..) => None,
         }
     }
 }

@@ -6,7 +6,7 @@ mod main {
 
     pub fn run(
         child: &mut std::process::Child,
-        mut pty: &pty_process::blocking::Pty,
+        pty: &mut pty_process::blocking::Pty,
     ) {
         let _raw = super::raw_guard::RawGuard::new();
         let mut buf = [0_u8; 4096];
@@ -75,14 +75,15 @@ mod main {
 fn main() {
     use std::os::unix::process::ExitStatusExt as _;
 
-    let pty = pty_process::blocking::Pty::new().unwrap();
+    let mut pty = pty_process::blocking::Pty::new().unwrap();
+    let pts = pty.pts().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("tac")
         // .args(&["500"])
-        .spawn(&pty)
+        .spawn(&pts)
         .unwrap();
 
-    main::run(&mut child, &pty);
+    main::run(&mut child, &mut pty);
 
     let status = child.wait().unwrap();
     std::process::exit(

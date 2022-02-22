@@ -1,83 +1,127 @@
-use std::os::unix::io::{FromRawFd as _, IntoRawFd as _};
+use std::os::unix::io::{AsRawFd as _, FromRawFd as _, IntoRawFd as _};
 
-pub fn create_pt() -> nix::Result<(std::fs::File, std::path::PathBuf)> {
-    let pt = nix::pty::posix_openpt(
-        nix::fcntl::OFlag::O_RDWR
-            | nix::fcntl::OFlag::O_NOCTTY
-            | nix::fcntl::OFlag::O_CLOEXEC,
-    )?;
-    nix::pty::grantpt(&pt)?;
-    nix::pty::unlockpt(&pt)?;
+#[derive(Debug)]
+pub struct Pty(pub nix::pty::PtyMaster);
 
-    let ptsname = nix::pty::ptsname_r(&pt)?.into();
+impl Pty {
+    pub fn open() -> crate::Result<Self> {
+        let pt = nix::pty::posix_openpt(
+            nix::fcntl::OFlag::O_RDWR
+                | nix::fcntl::OFlag::O_NOCTTY
+                | nix::fcntl::OFlag::O_CLOEXEC,
+        )?;
+        nix::pty::grantpt(&pt)?;
+        nix::pty::unlockpt(&pt)?;
 
-    let pt_fd = pt.into_raw_fd();
-
-    // Safety: posix_openpt (or the previous functions operating on the
-    // result) would have returned an Err (causing us to return early) if the
-    // file descriptor was invalid. additionally, into_raw_fd gives up
-    // ownership over the file descriptor, allowing the newly created File
-    // object to take full ownership.
-    let pt = unsafe { std::fs::File::from_raw_fd(pt_fd) };
-
-    Ok((pt, ptsname))
-}
-
-pub fn set_term_size(
-    fh: &impl std::os::unix::io::AsRawFd,
-    size: crate::Size,
-) -> nix::Result<()> {
-    let size = size.into();
-    let fd = fh.as_raw_fd();
-
-    // Safety: std::fs::File is required to contain a valid file descriptor
-    // and size is guaranteed to be initialized because it's a normal rust
-    // value, and nix::pty::Winsize is a repr(C) struct with the same layout
-    // as `struct winsize` from sys/ioctl.h.
-    unsafe {
-        set_term_size_unsafe(fd, std::ptr::NonNull::from(&size).as_ptr())
+        Ok(Self(pt))
     }
-    .map(|_| ())
-}
 
-pub fn setup_subprocess(
-    pts: &impl std::os::unix::io::AsRawFd,
-) -> nix::Result<(
-    std::process::Stdio,
-    std::process::Stdio,
-    std::process::Stdio,
-)> {
-    let pts_fd = pts.as_raw_fd();
+    pub fn set_term_size(&self, size: crate::Size) -> crate::Result<()> {
+        let size = size.into();
+        let fd = self.0.as_raw_fd();
 
-    let stdin =
-        nix::fcntl::fcntl(pts_fd, nix::fcntl::FcntlArg::F_DUPFD_CLOEXEC(0))?;
-    let stdout =
-        nix::fcntl::fcntl(pts_fd, nix::fcntl::FcntlArg::F_DUPFD_CLOEXEC(0))?;
-    let stderr =
-        nix::fcntl::fcntl(pts_fd, nix::fcntl::FcntlArg::F_DUPFD_CLOEXEC(0))?;
+        // Safety: nix::pty::PtyMaster is required to contain a valid file
+        // descriptor and size is guaranteed to be initialized because it's a
+        // normal rust value, and nix::pty::Winsize is a repr(C) struct with
+        // the same layout as `struct winsize` from sys/ioctl.h.
+        Ok(unsafe {
+            set_term_size_unsafe(fd, std::ptr::NonNull::from(&size).as_ptr())
+        }
+        .map(|_| ())?)
+    }
 
-    // Safety: these file descriptors were all just returned from dup, so they
-    // must be valid
-    Ok((
-        unsafe { std::process::Stdio::from_raw_fd(stdin) },
-        unsafe { std::process::Stdio::from_raw_fd(stdout) },
-        unsafe { std::process::Stdio::from_raw_fd(stderr) },
-    ))
-}
+    pub fn pts(&self) -> crate::Result<Pts> {
+        Ok(Pts(std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(nix::pty::ptsname_r(&self.0)?)?
+            .into_raw_fd()))
+    }
 
-pub fn session_leader(
-    pts: &impl std::os::unix::io::AsRawFd,
-) -> impl FnMut() -> std::io::Result<()> {
-    let pts_fd = pts.as_raw_fd();
-    move || {
-        nix::unistd::setsid()?;
-        set_controlling_terminal(pts_fd)?;
+    #[cfg(feature = "async")]
+    pub fn set_nonblocking(&self) -> nix::Result<()> {
+        let bits = nix::fcntl::fcntl(
+            self.0.as_raw_fd(),
+            nix::fcntl::FcntlArg::F_GETFL,
+        )?;
+        // Safety: bits was just returned from a F_GETFL call. ideally i would
+        // just be able to use from_bits here, but it fails for some reason?
+        let mut opts =
+            unsafe { nix::fcntl::OFlag::from_bits_unchecked(bits) };
+        opts |= nix::fcntl::OFlag::O_NONBLOCK;
+        nix::fcntl::fcntl(
+            self.0.as_raw_fd(),
+            nix::fcntl::FcntlArg::F_SETFL(opts),
+        )?;
+
         Ok(())
     }
 }
 
+impl std::os::unix::io::AsRawFd for Pty {
+    fn as_raw_fd(&self) -> std::os::unix::io::RawFd {
+        self.0.as_raw_fd()
+    }
+}
+
+pub struct Pts(std::os::unix::io::RawFd);
+
+impl Pts {
+    pub fn setup_subprocess(
+        &self,
+    ) -> nix::Result<(
+        std::process::Stdio,
+        std::process::Stdio,
+        std::process::Stdio,
+    )> {
+        let pts_fd = self.0.as_raw_fd();
+
+        let stdin = nix::fcntl::fcntl(
+            pts_fd,
+            nix::fcntl::FcntlArg::F_DUPFD_CLOEXEC(0),
+        )?;
+        let stdout = nix::fcntl::fcntl(
+            pts_fd,
+            nix::fcntl::FcntlArg::F_DUPFD_CLOEXEC(0),
+        )?;
+        let stderr = nix::fcntl::fcntl(
+            pts_fd,
+            nix::fcntl::FcntlArg::F_DUPFD_CLOEXEC(0),
+        )?;
+
+        // Safety: these file descriptors were all just returned from dup, so
+        // they must be valid
+        Ok((
+            unsafe { std::process::Stdio::from_raw_fd(stdin) },
+            unsafe { std::process::Stdio::from_raw_fd(stdout) },
+            unsafe { std::process::Stdio::from_raw_fd(stderr) },
+        ))
+    }
+
+    pub fn session_leader(&self) -> impl FnMut() -> std::io::Result<()> {
+        let pts_fd = self.0.as_raw_fd();
+        move || {
+            nix::unistd::setsid()?;
+            set_controlling_terminal(pts_fd)?;
+            Ok(())
+        }
+    }
+}
+
+impl Drop for Pts {
+    fn drop(&mut self) {
+        let _ = nix::unistd::close(self.0);
+    }
+}
+
+impl std::os::unix::io::AsRawFd for Pts {
+    fn as_raw_fd(&self) -> std::os::unix::io::RawFd {
+        self.0
+    }
+}
+
 fn set_controlling_terminal(fd: std::os::unix::io::RawFd) -> nix::Result<()> {
-    // Safety: std::fs::File is required to contain a valid file descriptor
+    // Safety: Pts is required to contain a valid file descriptor
     unsafe { set_controlling_terminal_unsafe(fd, std::ptr::null()) }
         .map(|_| ())
 }

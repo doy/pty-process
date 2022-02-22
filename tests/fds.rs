@@ -5,10 +5,11 @@ fn test_fds() {
     check_open_fds();
 
     let pty = pty_process::blocking::Pty::new().unwrap();
+    let pts = pty.pts().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("perl")
         .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")
-        .spawn(&pty)
+        .spawn(&pts)
         .unwrap();
 
     let mut output = helpers::output(&pty);
@@ -17,14 +18,16 @@ fn test_fds() {
     let status = child.wait().unwrap();
     assert_eq!(status.code().unwrap(), 0);
     drop(pty);
+    drop(pts);
     check_open_fds();
 
     let pty = pty_process::blocking::Pty::new().unwrap();
+    let pts = pty.pts().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("perl")
         .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")
         .stderr(std::process::Stdio::null())
-        .spawn(&pty)
+        .spawn(&pts)
         .unwrap();
 
     let mut output = helpers::output(&pty);
@@ -33,6 +36,7 @@ fn test_fds() {
     let status = child.wait().unwrap();
     assert_eq!(status.code().unwrap(), 0);
     drop(pty);
+    drop(pts);
     check_open_fds();
 }
 

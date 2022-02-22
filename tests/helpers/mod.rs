@@ -31,23 +31,20 @@ pub fn output(pty: &pty_process::blocking::Pty) -> Output<'_> {
 }
 
 #[cfg(feature = "async")]
-pub fn output_async(
-    pty: &pty_process::Pty,
-) -> std::pin::Pin<Box<dyn futures::stream::Stream<Item = String> + '_>> {
-    use async_std::io::prelude::BufReadExt as _;
+pub fn output_async<'a>(
+    pty: impl tokio::io::AsyncRead + std::marker::Unpin + 'a,
+) -> std::pin::Pin<Box<dyn futures::stream::Stream<Item = String> + 'a>> {
     use futures::FutureExt as _;
+    use tokio::io::AsyncBufReadExt as _;
 
-    let pty = async_std::io::BufReader::new(pty);
+    let pty = tokio::io::BufReader::new(pty);
     Box::pin(futures::stream::unfold(pty, |mut pty| async move {
         Some((
-            async_std::future::timeout(
-                std::time::Duration::from_secs(5),
-                async {
-                    let mut buf = vec![];
-                    pty.read_until(b'\n', &mut buf).await.unwrap();
-                    std::string::String::from_utf8(buf).unwrap()
-                },
-            )
+            tokio::time::timeout(std::time::Duration::from_secs(5), async {
+                let mut buf = vec![];
+                pty.read_until(b'\n', &mut buf).await.unwrap();
+                std::string::String::from_utf8(buf).unwrap()
+            })
             .map(|x| x.unwrap())
             .await,
             pty,

@@ -1,36 +1,31 @@
 # pty-process
 
-This crate adds a helper method to `std::process::Command` (and optionally its
-equivalent in various async frameworks) to allocate a pty to spawn the process
-into. This allows for manipulation of interactive programs.
+This crate is a wrapper around [`tokio::process::Command`] or
+[`std::process::Command`] which provides the ability to allocate a pty
+and spawn new processes attached to that pty, with the pty as their
+controlling terminal. This allows for manipulation of interactive
+programs.
 
-The basic functionality is provided by the `Command` trait in this crate:
-
-```rust
-use pty_process::Command as _;
-
-let mut cmd = std::process::Command::new("nethack");
-let child = cmd.spawn_pty(Some(&pty_process::Size::new(24, 80))).unwrap();
-```
-
-The `child` instance returned by the call to `spawn_pty` is a thin wrapper
-around the `Child` struct associated with the `Command` module used. You can
-use it identically to how you would use the normal `std::process::Child`
-instance, but it also provides additional methods for interacting with the pty:
+The basic functionality looks like this:
 
 ```rust
-use std::io::Write as _;
-
-child.pty().write_all(b"foo\n").unwrap();
-child.resize_pty(&pty_process::Size::new(30, 100)).unwrap();
-let status = child.wait().unwrap();
+let mut pty = pty_process::Pty::new().unwrap();
+pty.resize(pty_process::Size::new(24, 80)).unwrap();
+let mut cmd = pty_process::Command::new("nethack");
+let child = cmd.spawn(&pty.pts().unwrap()).unwrap();
 ```
 
-The available implementations are gated by features:
-* `backend-std`: Add an implementation for `std::process::Command`. Enabled by
-  default.
-* `backend-smol`: Add an implementation for `smol::process::Command`.
-* `backend-async-std`: Add an implementation for `async_std::process::Command`.
-* `backend-tokio`: Add an implementation for `tokio::process::Command`.
+The returned `child` is a normal instance of [`tokio::process::Child`] (or
+[`std::process::Child`] for the [`blocking`](crate::blocking) variant),
+with its `stdin`/`stdout`/`stderr` file descriptors pointing at the given
+pty. The `pty` instance implements [`tokio::io::AsyncRead`] and
+[`tokio::io::AsyncWrite`] (or [`std::io::Read`] and [`std::io::Write`] for
+the [`blocking`] variant), and can be used to communicate with the child
+process. The child process will also be made a session leader of a new
+session, and the controlling terminal of that session will be set to the
+given pty.
 
-Any number of backends may be enabled, depending on your needs.
+## Features
+
+By default, only the [`blocking`](crate::blocking) APIs are available. To
+include the asynchronous APIs, you must enable the `async` feature.

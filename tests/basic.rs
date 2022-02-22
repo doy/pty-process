@@ -4,42 +4,50 @@ mod helpers;
 fn test_cat_blocking() {
     use std::io::Write as _;
 
-    let pty = pty_process::blocking::Pty::new().unwrap();
+    let mut pty = pty_process::blocking::Pty::new().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("cat")
-        .spawn(&pty)
+        .spawn(&pty.pts().unwrap())
         .unwrap();
 
-    (&pty).write_all(b"foo\n").unwrap();
+    pty.write_all(b"foo\n").unwrap();
 
     let mut output = helpers::output(&pty);
     assert_eq!(output.next().unwrap(), "foo\r\n");
     assert_eq!(output.next().unwrap(), "foo\r\n");
 
-    (&pty).write_all(&[4u8]).unwrap();
+    pty.write_all(&[4u8]).unwrap();
     let status = child.wait().unwrap();
     assert_eq!(status.code().unwrap(), 0);
 }
 
 #[cfg(feature = "async")]
 #[test]
-fn test_cat_async_std() {
-    use async_std::io::prelude::WriteExt as _;
+fn test_cat_async() {
     use futures::stream::StreamExt as _;
+    use tokio::io::AsyncWriteExt as _;
 
-    let status = async_std::task::block_on(async {
-        let pty = pty_process::Pty::new().unwrap();
-        pty.resize(pty_process::Size::new(24, 80)).unwrap();
-        let mut child = pty_process::Command::new("cat").spawn(&pty).unwrap();
+    let status = tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(async {
+            let mut pty = pty_process::Pty::new().unwrap();
+            let pts = pty.pts().unwrap();
+            pty.resize(pty_process::Size::new(24, 80)).unwrap();
+            let mut child =
+                pty_process::Command::new("cat").spawn(&pts).unwrap();
 
-        (&pty).write_all(b"foo\n").await.unwrap();
+            let (pty_r, mut pty_w) = pty.split();
 
-        let mut output = helpers::output_async(&pty);
-        assert_eq!(output.next().await.unwrap(), "foo\r\n");
-        assert_eq!(output.next().await.unwrap(), "foo\r\n");
+            pty_w.write_all(b"foo\n").await.unwrap();
 
-        (&pty).write_all(&[4u8]).await.unwrap();
-        child.status().await.unwrap()
-    });
+            let mut output = helpers::output_async(pty_r);
+            assert_eq!(output.next().await.unwrap(), "foo\r\n");
+            assert_eq!(output.next().await.unwrap(), "foo\r\n");
+
+            pty_w.write_all(&[4u8]).await.unwrap();
+            child.wait().await.unwrap()
+        });
     assert_eq!(status.code().unwrap(), 0);
 }
