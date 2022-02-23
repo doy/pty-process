@@ -7,10 +7,23 @@
 //! The basic functionality looks like this:
 //!
 //! ```no_run
-//! let mut pty = pty_process::Pty::new().unwrap();
-//! pty.resize(pty_process::Size::new(24, 80)).unwrap();
+//! # #[cfg(feature = "async")]
+//! # #[tokio::main]
+//! # async fn main() -> pty_process::Result<()> {
+//! let mut pty = pty_process::Pty::new()?;
+//! pty.resize(pty_process::Size::new(24, 80))?;
 //! let mut cmd = pty_process::Command::new("nethack");
-//! let child = cmd.spawn(&pty.pts().unwrap()).unwrap();
+//! let child = cmd.spawn(&pty.pts()?)?;
+//! # Ok(())
+//! # }
+//! # #[cfg(not(feature = "async"))]
+//! # fn main() -> pty_process::Result<()> {
+//! let mut pty = pty_process::blocking::Pty::new()?;
+//! pty.resize(pty_process::Size::new(24, 80))?;
+//! let mut cmd = pty_process::blocking::Command::new("nethack");
+//! let child = cmd.spawn(&pty.pts()?)?;
+//! # Ok(())
+//! # }
 //! ```
 //!
 //! The returned `child` is a normal instance of [`tokio::process::Child`] (or
