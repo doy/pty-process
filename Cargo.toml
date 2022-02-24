@@ -30,4 +30,4 @@ default = []
 async = ["tokio"]
 
 [patch.crates-io]
-nix = { path = "../src/nix" }
+nix = { git = "https://github.com/nix-rust/nix" }
