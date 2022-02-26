@@ -76,7 +76,7 @@ impl tokio::io::AsyncRead for Pty {
                 std::task::Poll::Ready(guard) => guard,
                 std::task::Poll::Pending => return std::task::Poll::Pending,
             }?;
-            let mut b = [0u8; 4096];
+            let mut b = vec![0u8; buf.capacity()];
             match guard.try_io(|inner| (&inner.get_ref().0).read(&mut b)) {
                 Ok(Ok(bytes)) => {
                     // XXX this is safe, but not particularly efficient
@@ -154,7 +154,7 @@ impl<'a> tokio::io::AsyncRead for ReadPty<'a> {
                 std::task::Poll::Ready(guard) => guard,
                 std::task::Poll::Pending => return std::task::Poll::Pending,
             }?;
-            let mut b = [0u8; 4096];
+            let mut b = vec![0u8; buf.capacity()];
             match guard.try_io(|inner| (&inner.get_ref().0).read(&mut b)) {
                 Ok(Ok(bytes)) => {
                     // XXX this is safe, but not particularly efficient
@@ -267,7 +267,7 @@ impl tokio::io::AsyncRead for OwnedReadPty {
                 std::task::Poll::Ready(guard) => guard,
                 std::task::Poll::Pending => return std::task::Poll::Pending,
             }?;
-            let mut b = [0u8; 4096];
+            let mut b = vec![0u8; buf.capacity()];
             match guard.try_io(|inner| (&inner.get_ref().0).read(&mut b)) {
                 Ok(Ok(bytes)) => {
                     // XXX this is safe, but not particularly efficient
