@@ -60,50 +60,42 @@ fn test_pipe_blocking() {
 }
 
 #[cfg(feature = "async")]
+#[tokio::main]
 #[test]
-fn test_pipe_async() {
+async fn test_pipe_async() {
     use std::os::unix::io::FromRawFd as _;
     use tokio::io::AsyncReadExt as _;
 
-    tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(async {
-            let (read_fd, write_fd) =
-                nix::unistd::pipe2(nix::fcntl::OFlag::O_CLOEXEC).unwrap();
+    let (read_fd, write_fd) =
+        nix::unistd::pipe2(nix::fcntl::OFlag::O_CLOEXEC).unwrap();
 
-            let pty_from = pty_process::Pty::new().unwrap();
-            let pts_from = pty_from.pts().unwrap();
-            pty_from.resize(pty_process::Size::new(24, 80)).unwrap();
-            let mut cmd_from = pty_process::Command::new("seq");
-            cmd_from.args(["1", "10"]);
-            cmd_from.stdout(unsafe {
-                std::process::Stdio::from_raw_fd(write_fd)
-            });
-            let mut child_from = cmd_from.spawn(&pts_from).unwrap();
+    let pty_from = pty_process::Pty::new().unwrap();
+    let pts_from = pty_from.pts().unwrap();
+    pty_from.resize(pty_process::Size::new(24, 80)).unwrap();
+    let mut cmd_from = pty_process::Command::new("seq");
+    cmd_from.args(["1", "10"]);
+    cmd_from.stdout(unsafe { std::process::Stdio::from_raw_fd(write_fd) });
+    let mut child_from = cmd_from.spawn(&pts_from).unwrap();
 
-            let mut pty_to = pty_process::Pty::new().unwrap();
-            let pts_to = pty_to.pts().unwrap();
-            let mut cmd_to = pty_process::Command::new("tac");
-            cmd_to
-                .stdin(unsafe { std::process::Stdio::from_raw_fd(read_fd) });
-            let mut child_to = cmd_to.spawn(&pts_to).unwrap();
+    let mut pty_to = pty_process::Pty::new().unwrap();
+    let pts_to = pty_to.pts().unwrap();
+    let mut cmd_to = pty_process::Command::new("tac");
+    cmd_to.stdin(unsafe { std::process::Stdio::from_raw_fd(read_fd) });
+    let mut child_to = cmd_to.spawn(&pts_to).unwrap();
 
-            assert!(child_from.wait().await.unwrap().success());
-            drop(cmd_from);
+    assert!(child_from.wait().await.unwrap().success());
+    drop(cmd_from);
 
-            // wait for the `tac` process to finish generating output (we
-            // don't really have a good way to detect when that happens)
-            tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+    // wait for the `tac` process to finish generating output (we
+    // don't really have a good way to detect when that happens)
+    tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 
-            let mut buf = [0u8; 1024];
-            let bytes = pty_to.read(&mut buf).await.unwrap();
-            assert_eq!(
-                &buf[..bytes],
-                b"10\r\n9\r\n8\r\n7\r\n6\r\n5\r\n4\r\n3\r\n2\r\n1\r\n"
-            );
+    let mut buf = [0u8; 1024];
+    let bytes = pty_to.read(&mut buf).await.unwrap();
+    assert_eq!(
+        &buf[..bytes],
+        b"10\r\n9\r\n8\r\n7\r\n6\r\n5\r\n4\r\n3\r\n2\r\n1\r\n"
+    );
 
-            assert!(child_to.wait().await.unwrap().success());
-        });
+    assert!(child_to.wait().await.unwrap().success());
 }

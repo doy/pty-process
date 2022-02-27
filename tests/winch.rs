@@ -27,36 +27,31 @@ fn test_winch_std() {
 }
 
 #[cfg(feature = "async")]
+#[tokio::main]
 #[test]
-fn test_winch_async() {
+async fn test_winch_async() {
     use futures::stream::StreamExt as _;
     use tokio::io::AsyncWriteExt as _;
 
-    let status = tokio::runtime::Builder::new_multi_thread()
-        .enable_all()
-        .build()
-        .unwrap()
-        .block_on(async {
-            let mut pty = pty_process::Pty::new().unwrap();
-            let pts = pty.pts().unwrap();
-            pty.resize(pty_process::Size::new(24, 80)).unwrap();
-            let mut child = pty_process::Command::new("perl")
-            .args(&[
-                "-E",
-                "$|++; $SIG{WINCH} = sub { say 'WINCH' }; say 'started'; <>",
-            ])
-            .spawn(&pts)
-            .unwrap();
+    let mut pty = pty_process::Pty::new().unwrap();
+    let pts = pty.pts().unwrap();
+    pty.resize(pty_process::Size::new(24, 80)).unwrap();
+    let mut child = pty_process::Command::new("perl")
+        .args(&[
+            "-E",
+            "$|++; $SIG{WINCH} = sub { say 'WINCH' }; say 'started'; <>",
+        ])
+        .spawn(&pts)
+        .unwrap();
 
-            let (pty_r, mut pty_w) = pty.split();
-            let mut output = helpers::output_async(pty_r);
-            assert_eq!(output.next().await.unwrap(), "started\r\n");
+    let (pty_r, mut pty_w) = pty.split();
+    let mut output = helpers::output_async(pty_r);
+    assert_eq!(output.next().await.unwrap(), "started\r\n");
 
-            pty_w.resize(pty_process::Size::new(25, 80)).unwrap();
-            assert_eq!(output.next().await.unwrap(), "WINCH\r\n");
+    pty_w.resize(pty_process::Size::new(25, 80)).unwrap();
+    assert_eq!(output.next().await.unwrap(), "WINCH\r\n");
 
-            pty_w.write_all(b"\n").await.unwrap();
-            child.wait().await.unwrap()
-        });
+    pty_w.write_all(b"\n").await.unwrap();
+    let status = child.wait().await.unwrap();
     assert_eq!(status.code().unwrap(), 0);
 }
