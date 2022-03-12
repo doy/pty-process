@@ -1,8 +1,7 @@
 mod helpers;
 
 #[cfg(feature = "async")]
-#[tokio::main]
-#[test]
+#[tokio::test]
 async fn test_split() {
     use futures::stream::StreamExt as _;
     use tokio::io::AsyncWriteExt as _;
@@ -42,8 +41,7 @@ async fn test_split() {
 }
 
 #[cfg(feature = "async")]
-#[tokio::main]
-#[test]
+#[tokio::test]
 async fn test_into_split() {
     use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _};
 
@@ -111,8 +109,7 @@ async fn test_into_split() {
 }
 
 #[cfg(feature = "async")]
-#[tokio::main]
-#[test]
+#[tokio::test]
 async fn test_into_split_error() {
     let pty1 = pty_process::Pty::new().unwrap();
     let pty2 = pty_process::Pty::new().unwrap();

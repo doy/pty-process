@@ -22,8 +22,7 @@ fn test_cat_blocking() {
 }
 
 #[cfg(feature = "async")]
-#[tokio::main]
-#[test]
+#[tokio::test]
 async fn test_cat_async() {
     use futures::stream::StreamExt as _;
     use tokio::io::AsyncWriteExt as _;
@@ -47,8 +46,7 @@ async fn test_cat_async() {
 }
 
 #[cfg(feature = "async")]
-#[tokio::main]
-#[test]
+#[tokio::test]
 async fn test_yes_async() {
     use tokio::io::AsyncReadExt as _;
 

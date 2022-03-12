@@ -27,8 +27,7 @@ fn test_winch_std() {
 }
 
 #[cfg(feature = "async")]
-#[tokio::main]
-#[test]
+#[tokio::test]
 async fn test_winch_async() {
     use futures::stream::StreamExt as _;
     use tokio::io::AsyncWriteExt as _;

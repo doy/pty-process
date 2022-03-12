@@ -60,8 +60,7 @@ fn test_pipe_blocking() {
 }
 
 #[cfg(feature = "async")]
-#[tokio::main]
-#[test]
+#[tokio::test]
 async fn test_pipe_async() {
     use std::os::unix::io::FromRawFd as _;
     use tokio::io::AsyncReadExt as _;

@@ -29,8 +29,7 @@ fn test_multiple() {
 }
 
 #[cfg(feature = "async")]
-#[tokio::main]
-#[test]
+#[tokio::test]
 async fn test_multiple_async() {
     use futures::stream::StreamExt as _;
 
@@ -133,8 +132,7 @@ fn test_multiple_configured() {
 }
 
 #[cfg(feature = "async")]
-#[tokio::main]
-#[test]
+#[tokio::test]
 async fn test_multiple_configured_async() {
     use futures::stream::StreamExt as _;
     use std::os::unix::io::FromRawFd as _;
@@ -245,8 +243,7 @@ fn test_controlling_terminal() {
 }
 
 #[cfg(feature = "async")]
-#[tokio::main]
-#[test]
+#[tokio::test]
 async fn test_controlling_terminal_async() {
     use futures::stream::StreamExt as _;
 
@@ -287,8 +284,7 @@ fn test_session_leader() {
 }
 
 #[cfg(feature = "async")]
-#[tokio::main]
-#[test]
+#[tokio::test]
 async fn test_session_leader_async() {
     use futures::stream::StreamExt as _;
 
