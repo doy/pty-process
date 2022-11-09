@@ -14,7 +14,7 @@ include = ["src/**/*", "LICENSE", "README.md", "CHANGELOG.md"]
 
 [dependencies]
 libc = "0.2.119"
-nix = "0.23.1"
+nix = "0.25"
 
 tokio = { version = "1.17.0", features = ["fs", "process", "net"], optional = true }
 
@@ -22,12 +22,9 @@ tokio = { version = "1.17.0", features = ["fs", "process", "net"], optional = tr
 futures = "0.3.21"
 regex = "1.5.4"
 term_size = "0.3.2"
-tokio = { version = "1.17.0", features = ["full"] }
+tokio = { version = "1.21", features = ["full"] }
 
 [features]
 default = []
 
 async = ["tokio"]
-
-[patch.crates-io]
-nix = { git = "https://github.com/nix-rust/nix" }
