@@ -30,6 +30,16 @@ impl Pty {
         .map(|_| ())?)
     }
 
+    #[cfg(not(target_os = "linux"))]
+    pub fn pts(&self) -> crate::Result<Pts> {
+        Ok(Pts(std::fs::OpenOptions::new()
+            .read(true)
+            .write(true)
+            .open(unsafe { nix::pty::ptsname(&self.0) }?)?
+            .into_raw_fd()))
+    }
+
+    #[cfg(target_os = "linux")]
     pub fn pts(&self) -> crate::Result<Pts> {
         Ok(Pts(std::fs::OpenOptions::new()
             .read(true)
