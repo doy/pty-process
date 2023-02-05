@@ -8,7 +8,7 @@ fn test_winch_std() {
     let pts = pty.pts().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("perl")
-        .args(&[
+        .args([
             "-E",
             "$|++; $SIG{WINCH} = sub { say 'WINCH' }; say 'started'; <>",
         ])

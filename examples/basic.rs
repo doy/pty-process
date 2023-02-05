@@ -36,7 +36,7 @@ mod main {
                                     stdout.flush().unwrap();
                                 }
                                 Err(e) => {
-                                    eprintln!("pty read failed: {:?}", e);
+                                    eprintln!("pty read failed: {e:?}");
                                     break;
                                 }
                             };
@@ -48,7 +48,7 @@ mod main {
                                     pty.write_all(buf).unwrap();
                                 }
                                 Err(e) => {
-                                    eprintln!("stdin read failed: {:?}", e);
+                                    eprintln!("stdin read failed: {e:?}");
                                     break;
                                 }
                             }
@@ -56,7 +56,7 @@ mod main {
                     }
                 }
                 Err(e) => {
-                    println!("select failed: {:?}", e);
+                    println!("select failed: {e:?}");
                     break;
                 }
             }
@@ -64,7 +64,7 @@ mod main {
                 Ok(Some(_)) => break,
                 Ok(None) => {}
                 Err(e) => {
-                    println!("wait failed: {:?}", e);
+                    println!("wait failed: {e:?}");
                     break;
                 }
             }

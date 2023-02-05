@@ -13,8 +13,8 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Self::Io(e) => write!(f, "{}", e),
-            Self::Nix(e) => write!(f, "{}", e),
+            Self::Io(e) => write!(f, "{e}"),
+            Self::Nix(e) => write!(f, "{e}"),
             #[cfg(feature = "async")]
             Self::Unsplit(..) => {
                 write!(f, "unsplit called on halves of two different ptys")
