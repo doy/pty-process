@@ -102,7 +102,10 @@ impl Pts {
         let pts_fd = self.0.as_raw_fd();
         move || {
             nix::unistd::setsid()?;
-            set_controlling_terminal(pts_fd)?;
+            // Safety: Pts is required to contain a valid file descriptor
+            unsafe {
+                set_controlling_terminal_unsafe(pts_fd, std::ptr::null())
+            }?;
             Ok(())
         }
     }
@@ -118,12 +121,6 @@ impl std::os::unix::io::AsRawFd for Pts {
     fn as_raw_fd(&self) -> std::os::unix::io::RawFd {
         self.0
     }
-}
-
-fn set_controlling_terminal(fd: std::os::unix::io::RawFd) -> nix::Result<()> {
-    // Safety: Pts is required to contain a valid file descriptor
-    unsafe { set_controlling_terminal_unsafe(fd, std::ptr::null()) }
-        .map(|_| ())
 }
 
 nix::ioctl_write_ptr_bad!(
