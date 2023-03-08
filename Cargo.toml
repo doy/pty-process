@@ -16,12 +16,12 @@ include = ["src/**/*", "LICENSE", "README.md", "CHANGELOG.md"]
 libc = "0.2.139"
 nix = "0.26.2"
 
-tokio = { version = "1.25.0", features = ["fs", "process", "net"], optional = true }
+tokio = { version = "1.26.0", features = ["fs", "process", "net"], optional = true }
 
 [dev-dependencies]
 futures = "0.3.26"
 regex = "1.7.1"
-tokio = { version = "1.25.0", features = ["full"] }
+tokio = { version = "1.26.0", features = ["full"] }
 
 [features]
 default = []
