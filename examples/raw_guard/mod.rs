@@ -1,4 +1,4 @@
-use std::os::unix::io::AsRawFd as _;
+use std::os::fd::AsRawFd as _;
 
 pub struct RawGuard {
     termios: nix::sys::termios::Termios,

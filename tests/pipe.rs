@@ -1,16 +1,13 @@
 #[test]
 fn test_pipe_basic() {
-    use std::os::unix::io::FromRawFd as _;
-
-    let (read_fd, write_fd) =
-        nix::unistd::pipe2(nix::fcntl::OFlag::O_CLOEXEC).unwrap();
+    let (read_fd, write_fd) = pipe();
 
     let mut child_from = std::process::Command::new("seq");
     child_from.args(["1", "10"]);
-    child_from.stdout(unsafe { std::process::Stdio::from_raw_fd(write_fd) });
+    child_from.stdout(std::process::Stdio::from(write_fd));
 
     let mut child_to = std::process::Command::new("tac");
-    child_to.stdin(unsafe { std::process::Stdio::from_raw_fd(read_fd) });
+    child_to.stdin(std::process::Stdio::from(read_fd));
     child_to.stdout(std::process::Stdio::piped());
 
     assert!(child_from.status().unwrap().success());
@@ -23,23 +20,21 @@ fn test_pipe_basic() {
 #[test]
 fn test_pipe_blocking() {
     use std::io::Read as _;
-    use std::os::unix::io::FromRawFd as _;
 
-    let (read_fd, write_fd) =
-        nix::unistd::pipe2(nix::fcntl::OFlag::O_CLOEXEC).unwrap();
+    let (read_fd, write_fd) = pipe();
 
     let pty_from = pty_process::blocking::Pty::new().unwrap();
     let pts_from = pty_from.pts().unwrap();
     pty_from.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut cmd_from = pty_process::blocking::Command::new("seq");
     cmd_from.args(["1", "10"]);
-    cmd_from.stdout(unsafe { std::process::Stdio::from_raw_fd(write_fd) });
+    cmd_from.stdout(std::process::Stdio::from(write_fd));
     let mut child_from = cmd_from.spawn(&pts_from).unwrap();
 
     let mut pty_to = pty_process::blocking::Pty::new().unwrap();
     let pts_to = pty_to.pts().unwrap();
     let mut cmd_to = pty_process::blocking::Command::new("tac");
-    cmd_to.stdin(unsafe { std::process::Stdio::from_raw_fd(read_fd) });
+    cmd_to.stdin(std::process::Stdio::from(read_fd));
     let mut child_to = cmd_to.spawn(&pts_to).unwrap();
 
     assert!(child_from.wait().unwrap().success());
@@ -62,24 +57,22 @@ fn test_pipe_blocking() {
 #[cfg(feature = "async")]
 #[tokio::test]
 async fn test_pipe_async() {
-    use std::os::unix::io::FromRawFd as _;
     use tokio::io::AsyncReadExt as _;
 
-    let (read_fd, write_fd) =
-        nix::unistd::pipe2(nix::fcntl::OFlag::O_CLOEXEC).unwrap();
+    let (read_fd, write_fd) = pipe();
 
     let pty_from = pty_process::Pty::new().unwrap();
     let pts_from = pty_from.pts().unwrap();
     pty_from.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut cmd_from = pty_process::Command::new("seq");
     cmd_from.args(["1", "10"]);
-    cmd_from.stdout(unsafe { std::process::Stdio::from_raw_fd(write_fd) });
+    cmd_from.stdout(std::process::Stdio::from(write_fd));
     let mut child_from = cmd_from.spawn(&pts_from).unwrap();
 
     let mut pty_to = pty_process::Pty::new().unwrap();
     let pts_to = pty_to.pts().unwrap();
     let mut cmd_to = pty_process::Command::new("tac");
-    cmd_to.stdin(unsafe { std::process::Stdio::from_raw_fd(read_fd) });
+    cmd_to.stdin(std::process::Stdio::from(read_fd));
     let mut child_to = cmd_to.spawn(&pts_to).unwrap();
 
     assert!(child_from.wait().await.unwrap().success());
@@ -97,4 +90,13 @@ async fn test_pipe_async() {
     );
 
     assert!(child_to.wait().await.unwrap().success());
+}
+
+fn pipe() -> (std::os::fd::OwnedFd, std::os::fd::OwnedFd) {
+    use std::os::fd::FromRawFd as _;
+
+    let (r, w) = nix::unistd::pipe2(nix::fcntl::OFlag::O_CLOEXEC).unwrap();
+    (unsafe { std::os::fd::OwnedFd::from_raw_fd(r) }, unsafe {
+        std::os::fd::OwnedFd::from_raw_fd(w)
+    })
 }

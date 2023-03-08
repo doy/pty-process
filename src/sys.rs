@@ -1,4 +1,4 @@
-use std::os::unix::io::{AsRawFd as _, FromRawFd as _, IntoRawFd as _};
+use std::os::fd::{AsRawFd as _, FromRawFd as _};
 
 #[derive(Debug)]
 pub struct Pty(pub nix::pty::PtyMaster);
@@ -35,7 +35,7 @@ impl Pty {
             .read(true)
             .write(true)
             .open(nix::pty::ptsname_r(&self.0)?)?
-            .into_raw_fd()))
+            .into()))
     }
 
     #[cfg(feature = "async")]
@@ -58,43 +58,49 @@ impl Pty {
     }
 }
 
-impl std::os::unix::io::AsRawFd for Pty {
-    fn as_raw_fd(&self) -> std::os::unix::io::RawFd {
+impl From<Pty> for std::os::fd::OwnedFd {
+    fn from(pty: Pty) -> Self {
+        let Pty(nix_ptymaster) = pty;
+        let raw_fd = nix_ptymaster.as_raw_fd();
+        std::mem::forget(nix_ptymaster);
+
+        // Safety: nix::pty::PtyMaster is required to contain a valid file
+        // descriptor, and we ensured that the file descriptor will remain
+        // valid by skipping the drop implementation for nix::pty::PtyMaster
+        unsafe { Self::from_raw_fd(raw_fd) }
+    }
+}
+
+impl std::os::fd::AsFd for Pty {
+    fn as_fd(&self) -> std::os::fd::BorrowedFd<'_> {
+        let raw_fd = self.0.as_raw_fd();
+
+        // Safety: nix::pty::PtyMaster is required to contain a valid file
+        // descriptor, and it is owned by self
+        unsafe { std::os::fd::BorrowedFd::borrow_raw(raw_fd) }
+    }
+}
+
+impl std::os::fd::AsRawFd for Pty {
+    fn as_raw_fd(&self) -> std::os::fd::RawFd {
         self.0.as_raw_fd()
     }
 }
 
-pub struct Pts(std::os::unix::io::RawFd);
+pub struct Pts(std::os::fd::OwnedFd);
 
 impl Pts {
     pub fn setup_subprocess(
         &self,
-    ) -> nix::Result<(
+    ) -> std::io::Result<(
         std::process::Stdio,
         std::process::Stdio,
         std::process::Stdio,
     )> {
-        let pts_fd = self.0.as_raw_fd();
-
-        let stdin = nix::fcntl::fcntl(
-            pts_fd,
-            nix::fcntl::FcntlArg::F_DUPFD_CLOEXEC(0),
-        )?;
-        let stdout = nix::fcntl::fcntl(
-            pts_fd,
-            nix::fcntl::FcntlArg::F_DUPFD_CLOEXEC(0),
-        )?;
-        let stderr = nix::fcntl::fcntl(
-            pts_fd,
-            nix::fcntl::FcntlArg::F_DUPFD_CLOEXEC(0),
-        )?;
-
-        // Safety: these file descriptors were all just returned from dup, so
-        // they must be valid
         Ok((
-            unsafe { std::process::Stdio::from_raw_fd(stdin) },
-            unsafe { std::process::Stdio::from_raw_fd(stdout) },
-            unsafe { std::process::Stdio::from_raw_fd(stderr) },
+            self.0.try_clone()?.into(),
+            self.0.try_clone()?.into(),
+            self.0.try_clone()?.into(),
         ))
     }
 
@@ -102,7 +108,7 @@ impl Pts {
         let pts_fd = self.0.as_raw_fd();
         move || {
             nix::unistd::setsid()?;
-            // Safety: Pts is required to contain a valid file descriptor
+            // Safety: OwnedFds are required to contain a valid file descriptor
             unsafe {
                 set_controlling_terminal_unsafe(pts_fd, std::ptr::null())
             }?;
@@ -111,15 +117,21 @@ impl Pts {
     }
 }
 
-impl Drop for Pts {
-    fn drop(&mut self) {
-        let _ = nix::unistd::close(self.0);
+impl From<Pts> for std::os::fd::OwnedFd {
+    fn from(pts: Pts) -> Self {
+        pts.0
     }
 }
 
-impl std::os::unix::io::AsRawFd for Pts {
-    fn as_raw_fd(&self) -> std::os::unix::io::RawFd {
-        self.0
+impl std::os::fd::AsFd for Pts {
+    fn as_fd(&self) -> std::os::fd::BorrowedFd<'_> {
+        self.0.as_fd()
+    }
+}
+
+impl std::os::fd::AsRawFd for Pts {
+    fn as_raw_fd(&self) -> std::os::fd::RawFd {
+        self.0.as_raw_fd()
     }
 }
 

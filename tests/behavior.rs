@@ -63,26 +63,24 @@ async fn test_multiple_async() {
 #[test]
 fn test_multiple_configured() {
     use std::io::BufRead as _;
-    use std::os::unix::io::FromRawFd as _;
+    use std::os::fd::AsRawFd as _;
 
     let pty = pty_process::blocking::Pty::new().unwrap();
     let pts = pty.pts().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
 
-    let (stderr_pipe_r, stderr_pipe_w) = nix::unistd::pipe().unwrap();
-    let mut stderr_pipe_r = std::io::BufReader::new(unsafe {
-        std::fs::File::from_raw_fd(stderr_pipe_r)
-    });
-    let (pre_exec_pipe_r, pre_exec_pipe_w) = nix::unistd::pipe().unwrap();
-    let mut pre_exec_pipe_r = std::io::BufReader::new(unsafe {
-        std::fs::File::from_raw_fd(pre_exec_pipe_r)
-    });
+    let (stderr_pipe_r, stderr_pipe_w) = pipe();
+    let mut stderr_pipe_r =
+        std::io::BufReader::new(std::fs::File::from(stderr_pipe_r));
+    let (pre_exec_pipe_r, pre_exec_pipe_w) = pipe();
+    let mut pre_exec_pipe_r =
+        std::io::BufReader::new(std::fs::File::from(pre_exec_pipe_r));
     let mut cmd = pty_process::blocking::Command::new("perl");
     cmd.arg("-Esay 'foo'; say STDERR 'foo-stderr'; open my $fh, '>&=3'; say $fh 'foo-3';")
-        .stderr(unsafe { std::process::Stdio::from_raw_fd(stderr_pipe_w) });
+        .stderr(std::process::Stdio::from(stderr_pipe_w));
     unsafe {
         cmd.pre_exec(move || {
-            nix::unistd::dup2(pre_exec_pipe_w, 3)?;
+            nix::unistd::dup2(pre_exec_pipe_w.as_raw_fd(), 3)?;
             nix::fcntl::fcntl(
                 3,
                 nix::fcntl::F_SETFD(nix::fcntl::FdFlag::empty()),
@@ -135,7 +133,7 @@ fn test_multiple_configured() {
 #[tokio::test]
 async fn test_multiple_configured_async() {
     use futures::stream::StreamExt as _;
-    use std::os::unix::io::FromRawFd as _;
+    use std::os::fd::{AsRawFd as _, FromRawFd as _, IntoRawFd as _};
     use tokio::io::AsyncBufReadExt as _;
 
     let mut pty = pty_process::Pty::new().unwrap();
@@ -143,13 +141,13 @@ async fn test_multiple_configured_async() {
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let (pty_r, _) = pty.split();
 
-    let (stderr_pipe_r, stderr_pipe_w) = nix::unistd::pipe().unwrap();
+    let (stderr_pipe_r, stderr_pipe_w) = pipe();
     let mut stderr_pipe_r = tokio::io::BufReader::new(unsafe {
-        tokio::fs::File::from_raw_fd(stderr_pipe_r)
+        tokio::fs::File::from_raw_fd(stderr_pipe_r.into_raw_fd())
     });
-    let (pre_exec_pipe_r, pre_exec_pipe_w) = nix::unistd::pipe().unwrap();
+    let (pre_exec_pipe_r, pre_exec_pipe_w) = pipe();
     let mut pre_exec_pipe_r = tokio::io::BufReader::new(unsafe {
-        tokio::fs::File::from_raw_fd(pre_exec_pipe_r)
+        tokio::fs::File::from_raw_fd(pre_exec_pipe_r.into_raw_fd())
     });
     let mut cmd = pty_process::Command::new("perl");
     cmd.arg(
@@ -158,10 +156,10 @@ async fn test_multiple_configured_async() {
             open my $fh, '>&=3'; \
             say $fh 'foo-3';",
     )
-    .stderr(unsafe { std::process::Stdio::from_raw_fd(stderr_pipe_w) });
+    .stderr(std::process::Stdio::from(stderr_pipe_w));
     unsafe {
         cmd.pre_exec(move || {
-            nix::unistd::dup2(pre_exec_pipe_w, 3)?;
+            nix::unistd::dup2(pre_exec_pipe_w.as_raw_fd(), 3)?;
             nix::fcntl::fcntl(
                 3,
                 nix::fcntl::F_SETFD(nix::fcntl::FdFlag::empty()),
@@ -303,4 +301,13 @@ async fn test_session_leader_async() {
     let status = child.wait().await.unwrap();
     eprintln!("{:?}", status);
     assert_eq!(status.code().unwrap(), 0);
+}
+
+fn pipe() -> (std::os::fd::OwnedFd, std::os::fd::OwnedFd) {
+    use std::os::fd::FromRawFd as _;
+
+    let (r, w) = nix::unistd::pipe().unwrap();
+    (unsafe { std::os::fd::OwnedFd::from_raw_fd(r) }, unsafe {
+        std::os::fd::OwnedFd::from_raw_fd(w)
+    })
 }

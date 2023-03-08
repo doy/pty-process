@@ -2,7 +2,7 @@ mod raw_guard;
 
 mod main {
     use std::io::{Read as _, Write as _};
-    use std::os::unix::io::AsRawFd as _;
+    use std::os::fd::{AsFd as _, AsRawFd as _};
 
     pub fn run(
         child: &mut std::process::Child,
@@ -10,7 +10,7 @@ mod main {
     ) {
         let _raw = super::raw_guard::RawGuard::new();
         let mut buf = [0_u8; 4096];
-        let pty_fd = pty.as_raw_fd();
+        let pty_fd = pty.as_fd().as_raw_fd();
         let stdin_fd = std::io::stdin().as_raw_fd();
 
         loop {
