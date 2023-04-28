@@ -31,10 +31,16 @@ impl Pty {
     }
 
     pub fn pts(&self) -> crate::Result<Pts> {
+        #[cfg(target_os = "linux")]
+        let ptsname = nix::pty::ptsname_r(&self.0)?;
+
+        #[cfg(target_os = "macos")]
+        let ptsname = nix_ptsname_r_shim::ptsname_r(&self.0)?;
+
         Ok(Pts(std::fs::OpenOptions::new()
             .read(true)
             .write(true)
-            .open(nix::pty::ptsname_r(&self.0)?)?
+            .open(ptsname)?
             .into()))
     }
 
