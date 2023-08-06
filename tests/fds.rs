@@ -2,7 +2,7 @@ mod helpers;
 
 #[test]
 fn test_fds() {
-    check_open_fds();
+    let fds = check_open_fds(None);
 
     let pty = pty_process::blocking::Pty::new().unwrap();
     let pts = pty.pts().unwrap();
@@ -19,7 +19,7 @@ fn test_fds() {
     assert_eq!(status.code().unwrap(), 0);
     drop(pty);
     drop(pts);
-    check_open_fds();
+    check_open_fds(Some(&fds));
 
     let pty = pty_process::blocking::Pty::new().unwrap();
     let pts = pty.pts().unwrap();
@@ -37,13 +37,19 @@ fn test_fds() {
     assert_eq!(status.code().unwrap(), 0);
     drop(pty);
     drop(pts);
-    check_open_fds();
+    check_open_fds(Some(&fds));
 }
 
 #[track_caller]
-fn check_open_fds() {
+fn check_open_fds(expected: Option<&[i32]>) -> Vec<i32> {
     let open: Vec<_> = (0..=255)
         .filter(|fd| nix::sys::stat::fstat(*fd).is_ok())
         .collect();
-    assert_eq!(open, vec![0, 1, 2]);
+    assert!(open.contains(&0));
+    assert!(open.contains(&1));
+    assert!(open.contains(&2));
+    if let Some(fds) = expected {
+        assert_eq!(open, fds);
+    }
+    open.to_vec()
 }
