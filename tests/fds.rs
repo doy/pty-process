@@ -3,6 +3,9 @@ mod helpers;
 #[test]
 fn test_fds() {
     let fds = check_open_fds(None);
+    let fds_strings: Vec<String> =
+        fds.iter().map(std::string::ToString::to_string).collect();
+    let expected_output = format!("{}\r\n", fds_strings.join(""));
 
     let pty = pty_process::blocking::Pty::new().unwrap();
     let pts = pty.pts().unwrap();
@@ -13,7 +16,7 @@ fn test_fds() {
         .unwrap();
 
     let mut output = helpers::output(&pty);
-    assert_eq!(output.next().unwrap(), "012\r\n");
+    assert_eq!(output.next().unwrap(), expected_output);
 
     let status = child.wait().unwrap();
     assert_eq!(status.code().unwrap(), 0);
@@ -31,7 +34,7 @@ fn test_fds() {
         .unwrap();
 
     let mut output = helpers::output(&pty);
-    assert_eq!(output.next().unwrap(), "012\r\n");
+    assert_eq!(output.next().unwrap(), expected_output);
 
     let status = child.wait().unwrap();
     assert_eq!(status.code().unwrap(), 0);
