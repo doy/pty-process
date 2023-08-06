@@ -85,7 +85,7 @@ impl tokio::io::AsyncRead for Pty {
             // XXX should be able to optimize this once read_buf is stabilized
             // in std
             let b = buf.initialize_unfilled();
-            match guard.try_io(|inner| (&inner.get_ref().0).read(b)) {
+            match guard.try_io(|inner| inner.get_ref().read(b)) {
                 Ok(Ok(bytes)) => {
                     buf.advance(bytes);
                     return std::task::Poll::Ready(Ok(()));
@@ -108,7 +108,7 @@ impl tokio::io::AsyncWrite for Pty {
                 std::task::Poll::Ready(guard) => guard,
                 std::task::Poll::Pending => return std::task::Poll::Pending,
             }?;
-            match guard.try_io(|inner| (&inner.get_ref().0).write(buf)) {
+            match guard.try_io(|inner| inner.get_ref().write(buf)) {
                 Ok(result) => return std::task::Poll::Ready(result),
                 Err(_would_block) => continue,
             }
@@ -124,7 +124,7 @@ impl tokio::io::AsyncWrite for Pty {
                 std::task::Poll::Ready(guard) => guard,
                 std::task::Poll::Pending => return std::task::Poll::Pending,
             }?;
-            match guard.try_io(|inner| (&inner.get_ref().0).flush()) {
+            match guard.try_io(|inner| inner.get_ref().flush()) {
                 Ok(_) => return std::task::Poll::Ready(Ok(())),
                 Err(_would_block) => continue,
             }
@@ -161,7 +161,7 @@ impl<'a> tokio::io::AsyncRead for ReadPty<'a> {
             // XXX should be able to optimize this once read_buf is stabilized
             // in std
             let b = buf.initialize_unfilled();
-            match guard.try_io(|inner| (&inner.get_ref().0).read(b)) {
+            match guard.try_io(|inner| inner.get_ref().read(b)) {
                 Ok(Ok(bytes)) => {
                     buf.advance(bytes);
                     return std::task::Poll::Ready(Ok(()));
@@ -197,7 +197,7 @@ impl<'a> tokio::io::AsyncWrite for WritePty<'a> {
                 std::task::Poll::Ready(guard) => guard,
                 std::task::Poll::Pending => return std::task::Poll::Pending,
             }?;
-            match guard.try_io(|inner| (&inner.get_ref().0).write(buf)) {
+            match guard.try_io(|inner| inner.get_ref().write(buf)) {
                 Ok(result) => return std::task::Poll::Ready(result),
                 Err(_would_block) => continue,
             }
@@ -213,7 +213,7 @@ impl<'a> tokio::io::AsyncWrite for WritePty<'a> {
                 std::task::Poll::Ready(guard) => guard,
                 std::task::Poll::Pending => return std::task::Poll::Pending,
             }?;
-            match guard.try_io(|inner| (&inner.get_ref().0).flush()) {
+            match guard.try_io(|inner| inner.get_ref().flush()) {
                 Ok(_) => return std::task::Poll::Ready(Ok(())),
                 Err(_would_block) => continue,
             }
@@ -272,7 +272,7 @@ impl tokio::io::AsyncRead for OwnedReadPty {
             // XXX should be able to optimize this once read_buf is stabilized
             // in std
             let b = buf.initialize_unfilled();
-            match guard.try_io(|inner| (&inner.get_ref().0).read(b)) {
+            match guard.try_io(|inner| inner.get_ref().read(b)) {
                 Ok(Ok(bytes)) => {
                     buf.advance(bytes);
                     return std::task::Poll::Ready(Ok(()));
@@ -309,7 +309,7 @@ impl tokio::io::AsyncWrite for OwnedWritePty {
                 std::task::Poll::Ready(guard) => guard,
                 std::task::Poll::Pending => return std::task::Poll::Pending,
             }?;
-            match guard.try_io(|inner| (&inner.get_ref().0).write(buf)) {
+            match guard.try_io(|inner| inner.get_ref().write(buf)) {
                 Ok(result) => return std::task::Poll::Ready(result),
                 Err(_would_block) => continue,
             }
@@ -325,7 +325,7 @@ impl tokio::io::AsyncWrite for OwnedWritePty {
                 std::task::Poll::Ready(guard) => guard,
                 std::task::Poll::Pending => return std::task::Poll::Pending,
             }?;
-            match guard.try_io(|inner| (&inner.get_ref().0).flush()) {
+            match guard.try_io(|inner| inner.get_ref().flush()) {
                 Ok(_) => return std::task::Poll::Ready(Ok(())),
                 Err(_would_block) => continue,
             }

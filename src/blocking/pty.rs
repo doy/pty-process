@@ -44,33 +44,33 @@ impl std::os::fd::AsFd for Pty {
 
 impl std::io::Read for Pty {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        self.0 .0.read(buf)
+        self.0.read(buf)
     }
 }
 
 impl std::io::Write for Pty {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        self.0 .0.write(buf)
+        self.0.write(buf)
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        self.0 .0.flush()
+        self.0.flush()
     }
 }
 
 impl std::io::Read for &Pty {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
-        (&self.0 .0).read(buf)
+        (&self.0).read(buf)
     }
 }
 
 impl std::io::Write for &Pty {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
-        (&self.0 .0).write(buf)
+        (&self.0).write(buf)
     }
 
     fn flush(&mut self) -> std::io::Result<()> {
-        (&self.0 .0).flush()
+        (&self.0).flush()
     }
 }
 

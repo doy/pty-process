@@ -38,7 +38,7 @@ impl Size {
     }
 }
 
-impl From<Size> for nix::pty::Winsize {
+impl From<Size> for libc::winsize {
     fn from(size: Size) -> Self {
         Self {
             ws_row: size.row,

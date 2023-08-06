@@ -1,58 +1,60 @@
-use std::os::fd::{AsRawFd as _, FromRawFd as _};
+use std::os::{
+    fd::{AsRawFd as _, FromRawFd as _},
+    unix::prelude::OsStrExt as _,
+};
 
 #[derive(Debug)]
-pub struct Pty(pub nix::pty::PtyMaster);
+pub struct Pty(std::os::fd::OwnedFd);
 
 impl Pty {
     pub fn open() -> crate::Result<Self> {
-        let pt = nix::pty::posix_openpt(
-            nix::fcntl::OFlag::O_RDWR
-                | nix::fcntl::OFlag::O_NOCTTY
-                | nix::fcntl::OFlag::O_CLOEXEC,
+        let pt = rustix::pty::openpt(
+            rustix::pty::OpenptFlags::RDWR
+                | rustix::pty::OpenptFlags::NOCTTY
+                | rustix::pty::OpenptFlags::CLOEXEC,
         )?;
-        nix::pty::grantpt(&pt)?;
-        nix::pty::unlockpt(&pt)?;
+        rustix::pty::grantpt(&pt)?;
+        rustix::pty::unlockpt(&pt)?;
 
         Ok(Self(pt))
     }
 
     pub fn set_term_size(&self, size: crate::Size) -> crate::Result<()> {
-        let size = size.into();
+        let size: libc::winsize = size.into();
         let fd = self.0.as_raw_fd();
-
-        // Safety: nix::pty::PtyMaster is required to contain a valid file
-        // descriptor and size is guaranteed to be initialized because it's a
-        // normal rust value, and nix::pty::Winsize is a repr(C) struct with
-        // the same layout as `struct winsize` from sys/ioctl.h.
-        Ok(unsafe {
-            set_term_size_unsafe(fd, std::ptr::NonNull::from(&size).as_ptr())
+        // TODO: upstream this to rustix
+        unsafe {
+            let ret = libc::ioctl(
+                fd,
+                libc::TIOCSWINSZ,
+                std::ptr::NonNull::from(&size).as_ptr(),
+            );
+            if ret == -1 {
+                Err(rustix::io::Errno::from_raw_os_error(
+                    *libc::__errno_location(),
+                )
+                .into())
+            } else {
+                Ok(())
+            }
         }
-        .map(|_| ())?)
     }
 
     pub fn pts(&self) -> crate::Result<Pts> {
         Ok(Pts(std::fs::OpenOptions::new()
             .read(true)
             .write(true)
-            .open(nix::pty::ptsname_r(&self.0)?)?
+            .open(std::ffi::OsStr::from_bytes(
+                rustix::pty::ptsname(&self.0, vec![])?.as_bytes(),
+            ))?
             .into()))
     }
 
     #[cfg(feature = "async")]
-    pub fn set_nonblocking(&self) -> nix::Result<()> {
-        let bits = nix::fcntl::fcntl(
-            self.0.as_raw_fd(),
-            nix::fcntl::FcntlArg::F_GETFL,
-        )?;
-        // Safety: bits was just returned from a F_GETFL call. ideally i would
-        // just be able to use from_bits here, but it fails for some reason?
-        let mut opts =
-            unsafe { nix::fcntl::OFlag::from_bits_unchecked(bits) };
-        opts |= nix::fcntl::OFlag::O_NONBLOCK;
-        nix::fcntl::fcntl(
-            self.0.as_raw_fd(),
-            nix::fcntl::FcntlArg::F_SETFL(opts),
-        )?;
+    pub fn set_nonblocking(&self) -> rustix::io::Result<()> {
+        let mut opts = rustix::fs::fcntl_getfl(&self.0)?;
+        opts |= rustix::fs::OFlags::NONBLOCK;
+        rustix::fs::fcntl_setfl(&self.0, opts)?;
 
         Ok(())
     }
@@ -87,6 +89,38 @@ impl std::os::fd::AsRawFd for Pty {
     }
 }
 
+impl std::io::Read for Pty {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        rustix::io::read(&self.0, buf).map_err(std::io::Error::from)
+    }
+}
+
+impl std::io::Write for Pty {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        rustix::io::write(&self.0, buf).map_err(std::io::Error::from)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
+impl std::io::Read for &Pty {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        rustix::io::read(&self.0, buf).map_err(std::io::Error::from)
+    }
+}
+
+impl std::io::Write for &Pty {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        rustix::io::write(&self.0, buf).map_err(std::io::Error::from)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
+    }
+}
+
 pub struct Pts(std::os::fd::OwnedFd);
 
 impl Pts {
@@ -107,11 +141,10 @@ impl Pts {
     pub fn session_leader(&self) -> impl FnMut() -> std::io::Result<()> {
         let pts_fd = self.0.as_raw_fd();
         move || {
-            nix::unistd::setsid()?;
-            // Safety: OwnedFds are required to contain a valid file descriptor
-            unsafe {
-                set_controlling_terminal_unsafe(pts_fd, std::ptr::null())
-            }?;
+            rustix::process::setsid()?;
+            rustix::process::ioctl_tiocsctty(unsafe {
+                std::os::fd::BorrowedFd::borrow_raw(pts_fd)
+            })?;
             Ok(())
         }
     }
@@ -134,15 +167,3 @@ impl std::os::fd::AsRawFd for Pts {
         self.0.as_raw_fd()
     }
 }
-
-nix::ioctl_write_ptr_bad!(
-    set_term_size_unsafe,
-    libc::TIOCSWINSZ,
-    nix::pty::Winsize
-);
-
-nix::ioctl_write_ptr_bad!(
-    set_controlling_terminal_unsafe,
-    libc::TIOCSCTTY,
-    libc::c_int
-);
