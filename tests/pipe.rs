@@ -95,7 +95,7 @@ async fn test_pipe_async() {
 fn pipe() -> (std::os::fd::OwnedFd, std::os::fd::OwnedFd) {
     use std::os::fd::FromRawFd as _;
 
-    let (r, w) = nix::unistd::pipe2(nix::fcntl::OFlag::O_CLOEXEC).unwrap();
+    let (r, w) = nix::unistd::pipe().unwrap();
     (unsafe { std::os::fd::OwnedFd::from_raw_fd(r) }, unsafe {
         std::os::fd::OwnedFd::from_raw_fd(w)
     })
