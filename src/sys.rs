@@ -9,12 +9,15 @@ pub struct Pty(std::os::fd::OwnedFd);
 impl Pty {
     pub fn open() -> crate::Result<Self> {
         let pt = rustix::pty::openpt(
-            rustix::pty::OpenptFlags::RDWR
-                | rustix::pty::OpenptFlags::NOCTTY
-                | rustix::pty::OpenptFlags::CLOEXEC,
+            // can't use CLOEXEC here because it's linux-specific
+            rustix::pty::OpenptFlags::RDWR | rustix::pty::OpenptFlags::NOCTTY,
         )?;
         rustix::pty::grantpt(&pt)?;
         rustix::pty::unlockpt(&pt)?;
+
+        let mut flags = rustix::io::fcntl_getfd(&pt)?;
+        flags |= rustix::io::FdFlags::CLOEXEC;
+        rustix::io::fcntl_setfd(&pt, flags)?;
 
         Ok(Self(pt))
     }
@@ -31,7 +34,9 @@ impl Pty {
             );
             if ret == -1 {
                 Err(rustix::io::Errno::from_raw_os_error(
-                    *libc::__errno_location(),
+                    std::io::Error::last_os_error()
+                        .raw_os_error()
+                        .unwrap_or(0),
                 )
                 .into())
             } else {
