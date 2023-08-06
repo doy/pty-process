@@ -96,7 +96,20 @@ fn pipe() -> (std::os::fd::OwnedFd, std::os::fd::OwnedFd) {
     use std::os::fd::FromRawFd as _;
 
     let (r, w) = nix::unistd::pipe().unwrap();
+    cloexec(r);
+    cloexec(w);
     (unsafe { std::os::fd::OwnedFd::from_raw_fd(r) }, unsafe {
         std::os::fd::OwnedFd::from_raw_fd(w)
     })
+}
+
+fn cloexec(fd: i32) {
+    let flags = nix::fcntl::fcntl(fd, nix::fcntl::FcntlArg::F_GETFD).unwrap();
+    let mut flags = nix::fcntl::FdFlag::from_bits(flags).unwrap();
+    flags |= nix::fcntl::FdFlag::FD_CLOEXEC;
+    nix::fcntl::fcntl(
+        fd,
+        nix::fcntl::FcntlArg::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC),
+    )
+    .unwrap();
 }
