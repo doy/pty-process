@@ -23,25 +23,19 @@ impl Pty {
     }
 
     pub fn set_term_size(&self, size: crate::Size) -> crate::Result<()> {
-        let size: libc::winsize = size.into();
+        let size = libc::winsize::from(size);
         let fd = self.0.as_raw_fd();
         // TODO: upstream this to rustix
-        unsafe {
-            let ret = libc::ioctl(
-                fd,
-                libc::TIOCSWINSZ,
-                std::ptr::NonNull::from(&size).as_ptr(),
-            );
-            if ret == -1 {
-                Err(rustix::io::Errno::from_raw_os_error(
-                    std::io::Error::last_os_error()
-                        .raw_os_error()
-                        .unwrap_or(0),
-                )
-                .into())
-            } else {
-                Ok(())
-            }
+        let ret = unsafe {
+            libc::ioctl(fd, libc::TIOCSWINSZ, std::ptr::addr_of!(size))
+        };
+        if ret == -1 {
+            Err(rustix::io::Errno::from_raw_os_error(
+                std::io::Error::last_os_error().raw_os_error().unwrap_or(0),
+            )
+            .into())
+        } else {
+            Ok(())
         }
     }
 
