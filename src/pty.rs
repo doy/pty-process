@@ -71,6 +71,12 @@ impl std::os::fd::AsFd for Pty {
     }
 }
 
+impl std::os::fd::AsRawFd for Pty {
+    fn as_raw_fd(&self) -> std::os::fd::RawFd {
+        self.0.get_ref().as_raw_fd()
+    }
+}
+
 impl tokio::io::AsyncRead for Pty {
     fn poll_read(
         self: std::pin::Pin<&mut Self>,
