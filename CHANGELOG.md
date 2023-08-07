@@ -1,5 +1,15 @@
 # Changelog
 
+## [0.4.0] - 2023-08-06
+
+### Changed
+
+* Switch from nix to rustix, for hopefully better portability
+
+### Added
+
+* Implemented AsRawFd for the Pty structs
+
 ## [0.3.0] - 2023-03-08
 
 ### Changed
