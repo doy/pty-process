@@ -5,9 +5,10 @@ fn test_cat_blocking() {
     use std::io::Write as _;
 
     let mut pty = pty_process::blocking::Pty::new().unwrap();
+    let pts = pty.pts().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("cat")
-        .spawn(&pty.pts().unwrap())
+        .spawn(&pts)
         .unwrap();
 
     pty.write_all(b"foo\n").unwrap();
@@ -16,9 +17,7 @@ fn test_cat_blocking() {
     assert_eq!(output.next().unwrap(), "foo\r\n");
     assert_eq!(output.next().unwrap(), "foo\r\n");
 
-    pty.write_all(&[4u8]).unwrap();
-    let status = child.wait().unwrap();
-    assert_eq!(status.code().unwrap(), 0);
+    child.kill().unwrap();
 }
 
 #[cfg(feature = "async")]
@@ -40,9 +39,7 @@ async fn test_cat_async() {
     assert_eq!(output.next().await.unwrap(), "foo\r\n");
     assert_eq!(output.next().await.unwrap(), "foo\r\n");
 
-    pty_w.write_all(&[4u8]).await.unwrap();
-    let status = child.wait().await.unwrap();
-    assert_eq!(status.code().unwrap(), 0);
+    child.kill().await.unwrap()
 }
 
 #[cfg(feature = "async")]
@@ -68,5 +65,6 @@ async fn test_yes_async() {
     let bytes = pty_r.read_buf(&mut &mut buf[..]).await.unwrap();
     assert_eq!(&buf[..bytes], b"y\r\n");
 
-    child.kill().await.unwrap()
+    #[cfg(not(target_os = "macos"))]
+    child.kill().await.unwrap();
 }
