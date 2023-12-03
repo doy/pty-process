@@ -258,16 +258,18 @@ async fn test_controlling_terminal_async() {
     use futures::stream::StreamExt as _;
 
     let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
-    pty.resize(pty_process::Size::new(24, 80)).unwrap();
+    let mut child = {
+        let pts = pty.pts().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        pty_process::Command::new("perl")
+            .arg(
+                "-Eopen my $fh, '<', '/dev/tty' or die; \
+                    if (-t $fh) { say 'true' } else { say 'false' }",
+            )
+            .spawn(&pts)
+            .unwrap()
+    };
     let (pty_r, _) = pty.split();
-    let mut child = pty_process::Command::new("perl")
-        .arg(
-            "-Eopen my $fh, '<', '/dev/tty' or die; \
-                if (-t $fh) { say 'true' } else { say 'false' }",
-        )
-        .spawn(&pts)
-        .unwrap();
 
     let mut output = helpers::output_async(pty_r);
     assert_eq!(output.next().await.unwrap(), "true\r\n");
