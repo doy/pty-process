@@ -5,10 +5,13 @@ fn test_cat_blocking() {
     use std::io::Write as _;
 
     let mut pty = pty_process::blocking::Pty::new().unwrap();
-    pty.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut child = pty_process::blocking::Command::new("cat")
-        .spawn(&pty.pts().unwrap())
-        .unwrap();
+    let mut child = {
+        let pts = pty.pts().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        pty_process::blocking::Command::new("cat")
+            .spawn(&pts)
+            .unwrap()
+    };
 
     pty.write_all(b"foo\n").unwrap();
 
@@ -28,9 +31,11 @@ async fn test_cat_async() {
     use tokio::io::AsyncWriteExt as _;
 
     let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
-    pty.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut child = pty_process::Command::new("cat").spawn(&pts).unwrap();
+    let mut child = {
+        let pts = pty.pts().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        pty_process::Command::new("cat").spawn(&pts).unwrap()
+    };
 
     let (pty_r, mut pty_w) = pty.split();
 
@@ -51,9 +56,11 @@ async fn test_yes_async() {
     use tokio::io::AsyncReadExt as _;
 
     let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
-    pty.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut child = pty_process::Command::new("yes").spawn(&pts).unwrap();
+    let mut child = {
+        let pts = pty.pts().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        pty_process::Command::new("yes").spawn(&pts).unwrap()
+    };
 
     let mut buf = [0u8; 3];
 

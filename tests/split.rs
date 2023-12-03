@@ -7,11 +7,13 @@ async fn test_split() {
     use tokio::io::AsyncWriteExt as _;
 
     let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
-    pty.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut cmd = pty_process::Command::new("perl");
-    cmd.args(["-plE", "BEGIN { $SIG{WINCH} = sub { say 'WINCH' } }"]);
-    let mut child = cmd.spawn(&pts).unwrap();
+    let mut child = {
+        let pts = pty.pts().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        let mut cmd = pty_process::Command::new("perl");
+        cmd.args(["-plE", "BEGIN { $SIG{WINCH} = sub { say 'WINCH' } }"]);
+        cmd.spawn(&pts).unwrap()
+    };
 
     {
         pty.write_all(b"foo\n").await.unwrap();
@@ -46,11 +48,13 @@ async fn test_into_split() {
     use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _};
 
     let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
-    pty.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut cmd = pty_process::Command::new("perl");
-    cmd.args(["-plE", "BEGIN { $SIG{WINCH} = sub { say 'WINCH' } }"]);
-    let mut child = cmd.spawn(&pts).unwrap();
+    let mut child = {
+        let pts = pty.pts().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        let mut cmd = pty_process::Command::new("perl");
+        cmd.args(["-plE", "BEGIN { $SIG{WINCH} = sub { say 'WINCH' } }"]);
+        cmd.spawn(&pts).unwrap()
+    };
 
     {
         pty.write_all(b"foo\n").await.unwrap();

@@ -6,7 +6,10 @@ fn test_pipe_basic() {
     child_from.args(["1", "10"]);
     child_from.stdout(std::process::Stdio::from(write_fd));
 
-    let mut child_to = std::process::Command::new("tac");
+    let mut child_to = std::process::Command::new("perl");
+    child_to
+        .arg("-nle")
+        .arg("unshift @a, $_; END { print for @a }");
     child_to.stdin(std::process::Stdio::from(read_fd));
     child_to.stdout(std::process::Stdio::piped());
 
@@ -33,15 +36,18 @@ fn test_pipe_blocking() {
 
     let mut pty_to = pty_process::blocking::Pty::new().unwrap();
     let pts_to = pty_to.pts().unwrap();
-    let mut cmd_to = pty_process::blocking::Command::new("tac");
+    let mut cmd_to = pty_process::blocking::Command::new("perl");
+    cmd_to
+        .arg("-nle")
+        .arg("unshift @a, $_; END { print for @a }");
     cmd_to.stdin(std::process::Stdio::from(read_fd));
     let mut child_to = cmd_to.spawn(&pts_to).unwrap();
 
     assert!(child_from.wait().unwrap().success());
     drop(cmd_from);
 
-    // wait for the `tac` process to finish generating output (we don't really
-    // have a good way to detect when that happens)
+    // wait for the `perl` process to finish generating output (we don't
+    // really have a good way to detect when that happens)
     std::thread::sleep(std::time::Duration::from_millis(100));
 
     let mut buf = [0u8; 1024];
@@ -71,14 +77,17 @@ async fn test_pipe_async() {
 
     let mut pty_to = pty_process::Pty::new().unwrap();
     let pts_to = pty_to.pts().unwrap();
-    let mut cmd_to = pty_process::Command::new("tac");
+    let mut cmd_to = pty_process::Command::new("perl");
+    cmd_to
+        .arg("-nle")
+        .arg("unshift @a, $_; END { print for @a }");
     cmd_to.stdin(std::process::Stdio::from(read_fd));
     let mut child_to = cmd_to.spawn(&pts_to).unwrap();
 
     assert!(child_from.wait().await.unwrap().success());
     drop(cmd_from);
 
-    // wait for the `tac` process to finish generating output (we
+    // wait for the `perl` process to finish generating output (we
     // don't really have a good way to detect when that happens)
     tokio::time::sleep(std::time::Duration::from_millis(100)).await;
 

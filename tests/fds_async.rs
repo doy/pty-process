@@ -5,7 +5,10 @@ mod helpers;
 fn test_fds_async() {
     use futures::stream::StreamExt as _;
 
-    check_open_fds(&[0, 1, 2]);
+    let mut expected = String::new();
+    for fd in get_open_fds() {
+        expected.push_str(&format!("{}", fd));
+    }
 
     let rt = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
@@ -31,7 +34,7 @@ fn test_fds_async() {
 
         let (pty_r, _) = pty.split();
         let mut output = helpers::output_async(pty_r);
-        assert_eq!(output.next().await.unwrap(), "012\r\n");
+        assert_eq!(output.next().await.unwrap(), format!("{expected}\r\n"));
 
         let status = child.wait().await.unwrap();
         assert_eq!(status.code().unwrap(), 0);
@@ -56,7 +59,7 @@ fn test_fds_async() {
 
         let (pty_r, _) = pty.split();
         let mut output = helpers::output_async(pty_r);
-        assert_eq!(output.next().await.unwrap(), "012\r\n");
+        assert_eq!(output.next().await.unwrap(), format!("{expected}\r\n"));
 
         let status = child.wait().await.unwrap();
         assert_eq!(status.code().unwrap(), 0);
@@ -81,7 +84,7 @@ fn test_fds_async() {
 
         let (pty_r, _) = pty.split();
         let mut output = helpers::output_async(pty_r);
-        assert_eq!(output.next().await.unwrap(), "012\r\n");
+        assert_eq!(output.next().await.unwrap(), format!("{expected}\r\n"));
 
         let status = child.wait().await.unwrap();
         assert_eq!(status.code().unwrap(), 0);
