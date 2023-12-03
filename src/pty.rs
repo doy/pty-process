@@ -15,7 +15,6 @@ impl Pty {
     /// unable to put it into non-blocking mode.
     pub fn new() -> crate::Result<Self> {
         let pty = crate::sys::Pty::open()?;
-        pty.set_nonblocking()?;
         Ok(Self(tokio::io::unix::AsyncFd::new(pty)?))
     }
 
@@ -35,7 +34,9 @@ impl Pty {
     /// Returns an error if the device node to open could not be determined,
     /// or if the device node could not be opened.
     pub fn pts(&self) -> crate::Result<Pts> {
-        Ok(Pts(self.0.get_ref().pts()?))
+        let pts = Pts(self.0.get_ref().pts()?);
+        self.0.get_ref().set_nonblocking()?;
+        Ok(pts)
     }
 
     /// Splits a `Pty` into a read half and a write half, which can be used to

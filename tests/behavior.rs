@@ -1,5 +1,8 @@
 mod helpers;
 
+// macos doesn't appear to support spawning a second process onto a pty which
+// already had a process spawned onto it
+#[cfg(not(target_os = "macos"))]
 #[test]
 fn test_multiple() {
     let pty = pty_process::blocking::Pty::new().unwrap();
@@ -28,6 +31,9 @@ fn test_multiple() {
     assert_eq!(status.code().unwrap(), 0);
 }
 
+// macos doesn't appear to support spawning a second process onto a pty which
+// already had a process spawned onto it
+#[cfg(not(target_os = "macos"))]
 #[cfg(feature = "async")]
 #[tokio::test]
 async fn test_multiple_async() {
@@ -60,6 +66,9 @@ async fn test_multiple_async() {
     assert_eq!(status.code().unwrap(), 0);
 }
 
+// macos doesn't appear to support spawning a second process onto a pty which
+// already had a process spawned onto it
+#[cfg(not(target_os = "macos"))]
 #[test]
 fn test_multiple_configured() {
     use std::io::BufRead as _;
@@ -129,6 +138,9 @@ fn test_multiple_configured() {
     assert_eq!(status.code().unwrap(), 0);
 }
 
+// macos doesn't appear to support spawning a second process onto a pty which
+// already had a process spawned onto it
+#[cfg(not(target_os = "macos"))]
 #[cfg(feature = "async")]
 #[tokio::test]
 async fn test_multiple_configured_async() {
@@ -303,6 +315,7 @@ async fn test_session_leader_async() {
     assert_eq!(status.code().unwrap(), 0);
 }
 
+#[cfg(not(target_os = "macos"))]
 fn pipe() -> (std::os::fd::OwnedFd, std::os::fd::OwnedFd) {
     use std::os::fd::FromRawFd as _;
 

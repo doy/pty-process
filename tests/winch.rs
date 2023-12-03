@@ -5,15 +5,17 @@ fn test_winch_std() {
     use std::io::Write as _;
 
     let mut pty = pty_process::blocking::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
-    pty.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut child = pty_process::blocking::Command::new("perl")
-        .args([
-            "-E",
-            "$|++; $SIG{WINCH} = sub { say 'WINCH' }; say 'started'; <>",
-        ])
-        .spawn(&pts)
-        .unwrap();
+    let mut child = {
+        let pts = pty.pts().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        pty_process::blocking::Command::new("perl")
+            .args([
+                "-E",
+                "$|++; $SIG{WINCH} = sub { say 'WINCH' }; say 'started'; <>",
+            ])
+            .spawn(&pts)
+            .unwrap()
+    };
 
     let mut output = helpers::output(&pty);
     assert_eq!(output.next().unwrap(), "started\r\n");
@@ -33,15 +35,17 @@ async fn test_winch_async() {
     use tokio::io::AsyncWriteExt as _;
 
     let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
-    pty.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut child = pty_process::Command::new("perl")
-        .args(&[
-            "-E",
-            "$|++; $SIG{WINCH} = sub { say 'WINCH' }; say 'started'; <>",
-        ])
-        .spawn(&pts)
-        .unwrap();
+    let mut child = {
+        let pts = pty.pts().unwrap();
+        pty.resize(pty_process::Size::new(24, 80)).unwrap();
+        pty_process::Command::new("perl")
+            .args([
+                "-E",
+                "$|++; $SIG{WINCH} = sub { say 'WINCH' }; say 'started'; <>",
+            ])
+            .spawn(&pts)
+            .unwrap()
+    };
 
     let (pty_r, mut pty_w) = pty.split();
     let mut output = helpers::output_async(pty_r);
