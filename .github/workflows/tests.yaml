@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo build --all-targets
+      - run: cargo build --all-targets --all-features
   build-musl:
     runs-on: ubuntu-latest
     steps:
@@ -20,19 +20,19 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-musl
-      - run: TARGET_CC=clang-11 TARGET_AR=llvm-ar-11 cargo build --all-targets --target x86_64-unknown-linux-musl
+      - run: TARGET_CC=clang-11 TARGET_AR=llvm-ar-11 cargo build --all-targets --all-features --target x86_64-unknown-linux-musl
   build-macos:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo build --all-targets
+      - run: cargo build --all-targets --all-features
   test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test
+      - run: cargo test --all-features
   test-musl:
     runs-on: ubuntu-latest
     steps:
@@ -41,13 +41,13 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: x86_64-unknown-linux-musl
-      - run: TARGET_CC=clang-11 TARGET_AR=llvm-ar-11 cargo test --target x86_64-unknown-linux-musl
+      - run: TARGET_CC=clang-11 TARGET_AR=llvm-ar-11 cargo test --all-features --target x86_64-unknown-linux-musl
   test-macos:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo test
+      - run: cargo test --all-features
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -56,7 +56,7 @@ jobs:
         with:
           components: clippy, rustfmt
       - run: cargo install --locked --debug cargo-deny
-      - run: cargo clippy --all-targets -- -Dwarnings
+      - run: cargo clippy --all-targets --all-features -- -Dwarnings
       - run: cargo fmt --check
       - run: cargo deny check
   doc:
@@ -64,4 +64,4 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo doc
+      - run: cargo doc --all-features
