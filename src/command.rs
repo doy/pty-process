@@ -84,6 +84,12 @@ impl Command {
         self
     }
 
+    /// See [`tokio::process::Command::kill_on_drop`]
+    pub fn kill_on_drop(&mut self, kill_on_drop: bool) -> &mut Self {
+        self.inner.kill_on_drop(kill_on_drop);
+        self
+    }
+
     /// See [`tokio::process::Command::stdin`]
     pub fn stdin<T: Into<std::process::Stdio>>(
         &mut self,
