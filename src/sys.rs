@@ -57,6 +57,22 @@ impl Pty {
 
         Ok(())
     }
+
+    /// Use the provided file descriptor as a pty.
+    /// 
+    /// # Safety
+    /// The provided file descriptor has to belong to a pty.
+    pub unsafe fn from_fd(fd: std::os::fd::OwnedFd) -> Self {
+        Self(fd)
+    }
+
+    /// Use the provided raw file descriptor as a pty.
+    /// 
+    /// # Safety
+    /// The provided file descriptor has to belong to a pty.
+    pub unsafe fn from_raw_fd(raw_fd: std::os::fd::RawFd) -> Self {
+        Self(std::os::fd::OwnedFd::from_raw_fd(raw_fd))
+    }
 }
 
 impl From<Pty> for std::os::fd::OwnedFd {
