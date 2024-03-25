@@ -28,6 +28,25 @@ impl Pty {
     pub fn pts(&self) -> crate::Result<Pts> {
         Ok(Pts(self.0.pts()?))
     }
+
+    /// Use the provided file descriptor as a pty.
+    /// 
+    /// # Safety
+    /// The provided file descriptor has to belong to a pty.
+    pub unsafe fn from_fd(fd: std::os::fd::OwnedFd) -> Self {
+        let pty = crate::sys::Pty::from_fd(fd);
+        Self(pty)
+    }
+
+    /// Use the provided raw file descriptor as a pty.
+    /// 
+    /// # Safety
+    /// The provided file descriptor has to belong to a pty and has already been
+    /// put into non-blocking mode.
+    pub unsafe fn from_raw_fd(raw_fd: std::os::fd::RawFd) -> Self {
+        let pty = crate::sys::Pty::from_raw_fd(raw_fd);
+        Self(pty)
+    }
 }
 
 impl From<Pty> for std::os::fd::OwnedFd {

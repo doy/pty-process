@@ -19,6 +19,26 @@ impl Pty {
         Ok(Self(tokio::io::unix::AsyncFd::new(pty)?))
     }
 
+    /// Use the provided file descriptor as a pty.
+    /// 
+    /// # Safety
+    /// The provided file descriptor has to belong to a pty and has already been
+    /// put into non-blocking mode.
+    pub unsafe fn from_fd(fd: std::os::fd::OwnedFd) -> crate::Result<Self> {
+        let pty = crate::sys::Pty::from_fd(fd);
+        Ok(Self(tokio::io::unix::AsyncFd::new(pty)?))
+    }
+
+    /// Use the provided raw file descriptor as a pty.
+    /// 
+    /// # Safety
+    /// The provided file descriptor has to belong to a pty and has already been
+    /// put into non-blocking mode.
+    pub unsafe fn from_raw_fd(raw_fd: std::os::fd::RawFd) -> crate::Result<Self> {
+        let pty = crate::sys::Pty::from_raw_fd(raw_fd);
+        Ok(Self(tokio::io::unix::AsyncFd::new(pty)?))
+    }
+
     /// Change the terminal size associated with the pty.
     ///
     /// # Errors
