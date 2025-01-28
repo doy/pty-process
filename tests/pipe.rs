@@ -1,3 +1,8 @@
+#[cfg(not(target_os = "macos"))]
+const TAC: &str = "tac";
+#[cfg(target_os = "macos")]
+const TAC: &str = "tail -r";
+
 #[test]
 fn test_pipe_basic() {
     let (read_fd, write_fd) = pipe();
@@ -6,7 +11,8 @@ fn test_pipe_basic() {
     child_from.args(["1", "10"]);
     child_from.stdout(std::process::Stdio::from(write_fd));
 
-    let mut child_to = std::process::Command::new("tac");
+    let mut child_to = std::process::Command::new("sh");
+    child_to.args(["-c", TAC]);
     child_to.stdin(std::process::Stdio::from(read_fd));
     child_to.stdout(std::process::Stdio::piped());
 
@@ -31,7 +37,8 @@ fn test_pipe_blocking() {
     let mut child_from = cmd_from.spawn(pts_from).unwrap();
 
     let (mut pty_to, pts_to) = pty_process::blocking::open().unwrap();
-    let mut cmd_to = pty_process::blocking::Command::new("tac");
+    let mut cmd_to = pty_process::blocking::Command::new("sh");
+    cmd_to.args(["-c", TAC]);
     cmd_to.stdin(std::process::Stdio::from(read_fd));
     let mut child_to = cmd_to.spawn(pts_to).unwrap();
 
@@ -67,7 +74,8 @@ async fn test_pipe_async() {
     let mut child_from = cmd_from.spawn(pts_from).unwrap();
 
     let (mut pty_to, pts_to) = pty_process::open().unwrap();
-    let mut cmd_to = pty_process::Command::new("tac");
+    let mut cmd_to = pty_process::Command::new("sh");
+    cmd_to.args(["-c", TAC]);
     cmd_to.stdin(std::process::Stdio::from(read_fd));
     let mut child_to = cmd_to.spawn(pts_to).unwrap();
 
