@@ -38,7 +38,7 @@ impl Size {
     }
 }
 
-impl From<Size> for libc::winsize {
+impl From<Size> for rustix::termios::Winsize {
     fn from(size: Size) -> Self {
         Self {
             ws_row: size.row,
