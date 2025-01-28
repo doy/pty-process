@@ -54,7 +54,7 @@ async fn main() {
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::Command::new("tac")
         // .args(&["500"])
-        .spawn(&pts)
+        .spawn(pts)
         .unwrap();
     main::run(&mut child, &mut pty).await.unwrap();
     let status = child.wait().await.unwrap();

@@ -10,7 +10,7 @@ async fn test_split() {
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut cmd = pty_process::Command::new("perl");
     cmd.args(["-plE", "BEGIN { $SIG{WINCH} = sub { say 'WINCH' } }"]);
-    let mut child = cmd.spawn(&pts).unwrap();
+    let mut child = cmd.spawn(pts).unwrap();
 
     {
         pty.write_all(b"foo\n").await.unwrap();
@@ -48,7 +48,7 @@ async fn test_into_split() {
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut cmd = pty_process::Command::new("perl");
     cmd.args(["-plE", "BEGIN { $SIG{WINCH} = sub { say 'WINCH' } }"]);
-    let mut child = cmd.spawn(&pts).unwrap();
+    let mut child = cmd.spawn(pts).unwrap();
 
     {
         pty.write_all(b"foo\n").await.unwrap();

@@ -1,5 +1,6 @@
 mod helpers;
 
+#[cfg(not(target_os = "macos"))]
 #[test]
 fn test_multiple() {
     let (pty, pts) = pty_process::blocking::open().unwrap();
@@ -7,7 +8,7 @@ fn test_multiple() {
 
     let mut child = pty_process::blocking::Command::new("echo")
         .arg("foo")
-        .spawn(&pts)
+        .spawn_borrowed(&pts)
         .unwrap();
 
     let mut output = helpers::output(&pty);
@@ -18,7 +19,7 @@ fn test_multiple() {
 
     let mut child = pty_process::blocking::Command::new("echo")
         .arg("bar")
-        .spawn(&pts)
+        .spawn_borrowed(&pts)
         .unwrap();
 
     assert_eq!(output.next().unwrap(), "bar\r\n");
@@ -27,6 +28,7 @@ fn test_multiple() {
     assert_eq!(status.code().unwrap(), 0);
 }
 
+#[cfg(not(target_os = "macos"))]
 #[cfg(feature = "async")]
 #[tokio::test]
 async fn test_multiple_async() {
@@ -37,7 +39,7 @@ async fn test_multiple_async() {
 
     let mut child = pty_process::Command::new("echo")
         .arg("foo")
-        .spawn(&pts)
+        .spawn_borrowed(&pts)
         .unwrap();
     let (pty_r, _) = pty.split();
 
@@ -49,7 +51,7 @@ async fn test_multiple_async() {
 
     let mut child = pty_process::Command::new("echo")
         .arg("bar")
-        .spawn(&pts)
+        .spawn_borrowed(&pts)
         .unwrap();
 
     assert_eq!(output.next().await.unwrap(), "bar\r\n");
@@ -58,6 +60,7 @@ async fn test_multiple_async() {
     assert_eq!(status.code().unwrap(), 0);
 }
 
+#[cfg(not(target_os = "macos"))]
 #[test]
 fn test_multiple_configured() {
     use std::io::BufRead as _;
@@ -85,7 +88,7 @@ fn test_multiple_configured() {
             Ok(())
         });
     }
-    let mut child = cmd.spawn(&pts).unwrap();
+    let mut child = cmd.spawn_borrowed(&pts).unwrap();
 
     let mut output = helpers::output(&pty);
     assert_eq!(output.next().unwrap(), "foo\r\n");
@@ -105,7 +108,7 @@ fn test_multiple_configured() {
     let status = child.wait().unwrap();
     assert_eq!(status.code().unwrap(), 0);
 
-    let mut child = cmd.spawn(&pts).unwrap();
+    let mut child = cmd.spawn_borrowed(&pts).unwrap();
     let mut output = helpers::output(&pty);
 
     assert_eq!(output.next().unwrap(), "foo\r\n");
@@ -126,6 +129,7 @@ fn test_multiple_configured() {
     assert_eq!(status.code().unwrap(), 0);
 }
 
+#[cfg(not(target_os = "macos"))]
 #[cfg(feature = "async")]
 #[tokio::test]
 async fn test_multiple_configured_async() {
@@ -163,7 +167,7 @@ async fn test_multiple_configured_async() {
             Ok(())
         });
     }
-    let mut child = cmd.spawn(&pts).unwrap();
+    let mut child = cmd.spawn_borrowed(&pts).unwrap();
 
     let mut output = helpers::output_async(pty_r);
     assert_eq!(output.next().await.unwrap(), "foo\r\n");
@@ -191,7 +195,7 @@ async fn test_multiple_configured_async() {
     let status = child.wait().await.unwrap();
     assert_eq!(status.code().unwrap(), 0);
 
-    let mut child = cmd.spawn(&pts).unwrap();
+    let mut child = cmd.spawn_borrowed(&pts).unwrap();
 
     assert_eq!(output.next().await.unwrap(), "foo\r\n");
 
@@ -225,7 +229,7 @@ fn test_controlling_terminal() {
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("perl")
         .arg("-Eopen my $fh, '<', '/dev/tty' or die; if (-t $fh) { say 'true' } else { say 'false' }")
-        .spawn(&pts)
+        .spawn(pts)
         .unwrap();
 
     let mut output = helpers::output(&pty);
@@ -248,7 +252,7 @@ async fn test_controlling_terminal_async() {
             "-Eopen my $fh, '<', '/dev/tty' or die; \
                 if (-t $fh) { say 'true' } else { say 'false' }",
         )
-        .spawn(&pts)
+        .spawn(pts)
         .unwrap();
 
     let mut output = helpers::output_async(pty_r);
@@ -264,7 +268,7 @@ fn test_session_leader() {
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("python")
         .arg("-cimport os; print(os.getpid() == os.getsid(0))")
-        .spawn(&pts)
+        .spawn(pts)
         .unwrap();
 
     let mut output = helpers::output(&pty);
@@ -283,7 +287,7 @@ async fn test_session_leader_async() {
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::Command::new("python")
         .arg("-cimport os; print(os.getpid() == os.getsid(0))")
-        .spawn(&pts)
+        .spawn(pts)
         .unwrap();
 
     let (pty_r, _) = pty.split();

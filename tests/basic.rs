@@ -7,7 +7,7 @@ fn test_cat_blocking() {
     let (mut pty, pts) = pty_process::blocking::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("cat")
-        .spawn(&pts)
+        .spawn(pts)
         .unwrap();
 
     pty.write_all(b"foo\n").unwrap();
@@ -29,7 +29,7 @@ async fn test_cat_async() {
 
     let (mut pty, pts) = pty_process::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut child = pty_process::Command::new("cat").spawn(&pts).unwrap();
+    let mut child = pty_process::Command::new("cat").spawn(pts).unwrap();
 
     let (pty_r, mut pty_w) = pty.split();
 
@@ -51,7 +51,7 @@ async fn test_yes_async() {
 
     let (mut pty, pts) = pty_process::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut child = pty_process::Command::new("yes").spawn(&pts).unwrap();
+    let mut child = pty_process::Command::new("yes").spawn(pts).unwrap();
 
     let mut buf = [0u8; 3];
 

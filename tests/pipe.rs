@@ -28,12 +28,12 @@ fn test_pipe_blocking() {
     let mut cmd_from = pty_process::blocking::Command::new("seq");
     cmd_from.args(["1", "10"]);
     cmd_from.stdout(std::process::Stdio::from(write_fd));
-    let mut child_from = cmd_from.spawn(&pts_from).unwrap();
+    let mut child_from = cmd_from.spawn(pts_from).unwrap();
 
     let (mut pty_to, pts_to) = pty_process::blocking::open().unwrap();
     let mut cmd_to = pty_process::blocking::Command::new("tac");
     cmd_to.stdin(std::process::Stdio::from(read_fd));
-    let mut child_to = cmd_to.spawn(&pts_to).unwrap();
+    let mut child_to = cmd_to.spawn(pts_to).unwrap();
 
     assert!(child_from.wait().unwrap().success());
     drop(cmd_from);
@@ -64,12 +64,12 @@ async fn test_pipe_async() {
     let mut cmd_from = pty_process::Command::new("seq");
     cmd_from.args(["1", "10"]);
     cmd_from.stdout(std::process::Stdio::from(write_fd));
-    let mut child_from = cmd_from.spawn(&pts_from).unwrap();
+    let mut child_from = cmd_from.spawn(pts_from).unwrap();
 
     let (mut pty_to, pts_to) = pty_process::open().unwrap();
     let mut cmd_to = pty_process::Command::new("tac");
     cmd_to.stdin(std::process::Stdio::from(read_fd));
-    let mut child_to = cmd_to.spawn(&pts_to).unwrap();
+    let mut child_to = cmd_to.spawn(pts_to).unwrap();
 
     assert!(child_from.wait().await.unwrap().success());
     drop(cmd_from);

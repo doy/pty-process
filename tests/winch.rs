@@ -11,7 +11,7 @@ fn test_winch_std() {
             "-E",
             "$|++; $SIG{WINCH} = sub { say 'WINCH' }; say 'started'; <>",
         ])
-        .spawn(&pts)
+        .spawn(pts)
         .unwrap();
 
     let mut output = helpers::output(&pty);
@@ -38,7 +38,7 @@ async fn test_winch_async() {
             "-E",
             "$|++; $SIG{WINCH} = sub { say 'WINCH' }; say 'started'; <>",
         ])
-        .spawn(&pts)
+        .spawn(pts)
         .unwrap();
 
     let (pty_r, mut pty_w) = pty.split();

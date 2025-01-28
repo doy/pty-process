@@ -82,7 +82,7 @@ async fn main() {
 
     let (mut pty, pts) = pty_process::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut child = pty_process::Command::new("nethack").spawn(&pts).unwrap();
+    let mut child = pty_process::Command::new("nethack").spawn(pts).unwrap();
     main::run(&mut child, &mut pty).await.unwrap();
     let status = child.wait().await.unwrap();
     std::process::exit(

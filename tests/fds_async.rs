@@ -28,7 +28,7 @@ fn test_fds_async() {
                 }; \
                 say",
             )
-            .spawn(&pts)
+            .spawn(pts)
             .unwrap();
 
         let (pty_r, _) = pty.split();
@@ -52,7 +52,7 @@ fn test_fds_async() {
                 }; \
                 say",
             )
-            .spawn(&pts)
+            .spawn(pts)
             .unwrap();
 
         let (pty_r, _) = pty.split();
@@ -62,7 +62,6 @@ fn test_fds_async() {
         let status = child.wait().await.unwrap();
         assert_eq!(status.code().unwrap(), 0);
         drop(output);
-        drop(pts);
         drop(pty);
 
         check_open_fds(&fds);
@@ -76,7 +75,7 @@ fn test_fds_async() {
         let mut child = pty_process::Command::new("perl")
             .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")
             .stderr(std::process::Stdio::null())
-            .spawn(&pts)
+            .spawn(pts)
             .unwrap();
 
         let (pty_r, _) = pty.split();
@@ -86,7 +85,6 @@ fn test_fds_async() {
         let status = child.wait().await.unwrap();
         assert_eq!(status.code().unwrap(), 0);
         drop(output);
-        drop(pts);
         drop(pty);
 
         check_open_fds(&fds);

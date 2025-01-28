@@ -135,7 +135,42 @@ impl Command {
     /// child process (see the documentation for
     /// [`tokio::process::Command::spawn`]), or if we fail to make the child a
     /// session leader or set its controlling terminal.
+    #[allow(clippy::needless_pass_by_value)]
     pub fn spawn(
+        &mut self,
+        pts: crate::Pts,
+    ) -> crate::Result<tokio::process::Child> {
+        self.spawn_impl(&pts)
+    }
+
+    /// Executes the command as a child process via
+    /// [`tokio::process::Command::spawn`] on the given pty. The pty will be
+    /// attached to all of `stdin`, `stdout`, and `stderr` of the child,
+    /// unless those file descriptors were previously overridden through calls
+    /// to [`stdin`](Self::stdin), [`stdout`](Self::stdout), or
+    /// [`stderr`](Self::stderr). The newly created child process will also be
+    /// made the session leader of a new session, and will have the given
+    /// pty set as its controlling terminal.
+    ///
+    /// Differs from `spawn` in that it borrows the pty rather than consuming
+    /// it, allowing for multiple commands to be spawned onto the same pty in
+    /// sequence, but this functionality is not available on macos.
+    ///
+    /// # Errors
+    /// Returns an error if we fail to allocate new file descriptors for
+    /// attaching the pty to the child process, or if we fail to spawn the
+    /// child process (see the documentation for
+    /// [`tokio::process::Command::spawn`]), or if we fail to make the child a
+    /// session leader or set its controlling terminal.
+    #[cfg(not(target_os = "macos"))]
+    pub fn spawn_borrowed(
+        &mut self,
+        pts: &crate::Pts,
+    ) -> crate::Result<tokio::process::Child> {
+        self.spawn_impl(pts)
+    }
+
+    fn spawn_impl(
         &mut self,
         pts: &crate::Pts,
     ) -> crate::Result<tokio::process::Child> {
