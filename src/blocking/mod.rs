@@ -4,4 +4,4 @@
 mod command;
 pub use command::Command;
 mod pty;
-pub use pty::{Pts, Pty};
+pub use pty::{open, Pts, Pty};

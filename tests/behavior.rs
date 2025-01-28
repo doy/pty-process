@@ -2,8 +2,7 @@ mod helpers;
 
 #[test]
 fn test_multiple() {
-    let pty = pty_process::blocking::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (pty, pts) = pty_process::blocking::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
 
     let mut child = pty_process::blocking::Command::new("echo")
@@ -33,8 +32,7 @@ fn test_multiple() {
 async fn test_multiple_async() {
     use futures::stream::StreamExt as _;
 
-    let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (mut pty, pts) = pty_process::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
 
     let mut child = pty_process::Command::new("echo")
@@ -65,8 +63,7 @@ fn test_multiple_configured() {
     use std::io::BufRead as _;
     use std::os::fd::AsRawFd as _;
 
-    let pty = pty_process::blocking::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (pty, pts) = pty_process::blocking::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
 
     let (stderr_pipe_r, stderr_pipe_w) = pipe();
@@ -136,8 +133,7 @@ async fn test_multiple_configured_async() {
     use std::os::fd::{AsRawFd as _, FromRawFd as _, IntoRawFd as _};
     use tokio::io::AsyncBufReadExt as _;
 
-    let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (mut pty, pts) = pty_process::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let (pty_r, _) = pty.split();
 
@@ -225,8 +221,7 @@ async fn test_multiple_configured_async() {
 
 #[test]
 fn test_controlling_terminal() {
-    let pty = pty_process::blocking::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (pty, pts) = pty_process::blocking::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("perl")
         .arg("-Eopen my $fh, '<', '/dev/tty' or die; if (-t $fh) { say 'true' } else { say 'false' }")
@@ -245,8 +240,7 @@ fn test_controlling_terminal() {
 async fn test_controlling_terminal_async() {
     use futures::stream::StreamExt as _;
 
-    let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (mut pty, pts) = pty_process::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let (pty_r, _) = pty.split();
     let mut child = pty_process::Command::new("perl")
@@ -266,8 +260,7 @@ async fn test_controlling_terminal_async() {
 
 #[test]
 fn test_session_leader() {
-    let pty = pty_process::blocking::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (pty, pts) = pty_process::blocking::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("python")
         .arg("-cimport os; print(os.getpid() == os.getsid(0))")
@@ -286,8 +279,7 @@ fn test_session_leader() {
 async fn test_session_leader_async() {
     use futures::stream::StreamExt as _;
 
-    let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (mut pty, pts) = pty_process::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::Command::new("python")
         .arg("-cimport os; print(os.getpid() == os.getsid(0))")

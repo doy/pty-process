@@ -10,18 +10,18 @@
 //! # #[cfg(feature = "async")]
 //! # #[tokio::main]
 //! # async fn main() -> pty_process::Result<()> {
-//! let mut pty = pty_process::Pty::new()?;
+//! let (mut pty, pts) = pty_process::open()?;
 //! pty.resize(pty_process::Size::new(24, 80))?;
 //! let mut cmd = pty_process::Command::new("nethack");
-//! let child = cmd.spawn(&pty.pts()?)?;
+//! let child = cmd.spawn(&pts)?;
 //! # Ok(())
 //! # }
 //! # #[cfg(not(feature = "async"))]
 //! # fn main() -> pty_process::Result<()> {
-//! let mut pty = pty_process::blocking::Pty::new()?;
+//! let (mut pty, pts) = pty_process::blocking::open()?;
 //! pty.resize(pty_process::Size::new(24, 80))?;
 //! let mut cmd = pty_process::blocking::Command::new("nethack");
-//! let child = cmd.spawn(&pty.pts()?)?;
+//! let child = cmd.spawn(&pts)?;
 //! # Ok(())
 //! # }
 //! ```
@@ -70,4 +70,6 @@ pub use command::Command;
 #[cfg(feature = "async")]
 mod pty;
 #[cfg(feature = "async")]
-pub use pty::{OwnedReadPty, OwnedWritePty, Pts, Pty, ReadPty, WritePty};
+pub use pty::{
+    open, OwnedReadPty, OwnedWritePty, Pts, Pty, ReadPty, WritePty,
+};

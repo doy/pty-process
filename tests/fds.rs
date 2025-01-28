@@ -7,8 +7,7 @@ fn test_fds() {
         fds.iter().map(std::string::ToString::to_string).collect();
     let expected_output = format!("{}\r\n", fds_strings.join(""));
 
-    let pty = pty_process::blocking::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (pty, pts) = pty_process::blocking::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("perl")
         .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")
@@ -24,8 +23,7 @@ fn test_fds() {
     drop(pts);
     check_open_fds(Some(&fds));
 
-    let pty = pty_process::blocking::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (pty, pts) = pty_process::blocking::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::blocking::Command::new("perl")
         .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")

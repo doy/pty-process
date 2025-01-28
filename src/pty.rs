@@ -4,38 +4,29 @@ use std::io::{Read as _, Write as _};
 
 type AsyncPty = tokio::io::unix::AsyncFd<crate::sys::Pty>;
 
+/// Allocate and return a new pty and pts.
+///
+/// # Errors
+/// Returns an error if the pty failed to be allocated, or if we were
+/// unable to put it into non-blocking mode.
+pub fn open() -> crate::Result<(Pty, Pts)> {
+    let pty = crate::sys::Pty::open()?;
+    let pts = pty.pts()?;
+    pty.set_nonblocking()?;
+    let pty = tokio::io::unix::AsyncFd::new(pty)?;
+    Ok((Pty(pty), Pts(pts)))
+}
+
 /// An allocated pty
 pub struct Pty(AsyncPty);
 
 impl Pty {
-    /// Allocate and return a new pty.
-    ///
-    /// # Errors
-    /// Returns an error if the pty failed to be allocated, or if we were
-    /// unable to put it into non-blocking mode.
-    pub fn new() -> crate::Result<Self> {
-        let pty = crate::sys::Pty::open()?;
-        pty.set_nonblocking()?;
-        Ok(Self(tokio::io::unix::AsyncFd::new(pty)?))
-    }
-
     /// Change the terminal size associated with the pty.
     ///
     /// # Errors
     /// Returns an error if we were unable to set the terminal size.
     pub fn resize(&self, size: crate::Size) -> crate::Result<()> {
         self.0.get_ref().set_term_size(size)
-    }
-
-    /// Opens a file descriptor for the other end of the pty, which should be
-    /// attached to the child process running in it. See
-    /// [`Command::spawn`](crate::Command::spawn).
-    ///
-    /// # Errors
-    /// Returns an error if the device node to open could not be determined,
-    /// or if the device node could not be opened.
-    pub fn pts(&self) -> crate::Result<Pts> {
-        Ok(Pts(self.0.get_ref().pts()?))
     }
 
     /// Splits a `Pty` into a read half and a write half, which can be used to

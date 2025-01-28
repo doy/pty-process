@@ -15,8 +15,7 @@ fn test_fds_async() {
     // run once to ensure all of the fds in the tokio machinery are
     // allocated
     rt.block_on(async {
-        let mut pty = pty_process::Pty::new().unwrap();
-        let pts = pty.pts().unwrap();
+        let (mut pty, pts) = pty_process::open().unwrap();
         pty.resize(pty_process::Size::new(24, 80)).unwrap();
         let mut child = pty_process::Command::new("perl")
             .arg(
@@ -40,8 +39,7 @@ fn test_fds_async() {
     rt.block_on(async {
         let fds = get_open_fds();
 
-        let mut pty = pty_process::Pty::new().unwrap();
-        let pts = pty.pts().unwrap();
+        let (mut pty, pts) = pty_process::open().unwrap();
         pty.resize(pty_process::Size::new(24, 80)).unwrap();
         let mut child = pty_process::Command::new("perl")
             .arg(
@@ -70,8 +68,7 @@ fn test_fds_async() {
     rt.block_on(async {
         let fds = get_open_fds();
 
-        let mut pty = pty_process::Pty::new().unwrap();
-        let pts = pty.pts().unwrap();
+        let (mut pty, pts) = pty_process::open().unwrap();
         pty.resize(pty_process::Size::new(24, 80)).unwrap();
         let mut child = pty_process::Command::new("perl")
             .arg("-Efor my $fd (0..255) { open my $fh, \"<&=$fd\"; print $fd if stat $fh }; say")

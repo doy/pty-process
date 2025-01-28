@@ -6,8 +6,7 @@ async fn test_split() {
     use futures::stream::StreamExt as _;
     use tokio::io::AsyncWriteExt as _;
 
-    let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (mut pty, pts) = pty_process::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut cmd = pty_process::Command::new("perl");
     cmd.args(["-plE", "BEGIN { $SIG{WINCH} = sub { say 'WINCH' } }"]);
@@ -45,8 +44,7 @@ async fn test_split() {
 async fn test_into_split() {
     use tokio::io::{AsyncBufReadExt as _, AsyncWriteExt as _};
 
-    let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (mut pty, pts) = pty_process::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut cmd = pty_process::Command::new("perl");
     cmd.args(["-plE", "BEGIN { $SIG{WINCH} = sub { say 'WINCH' } }"]);
@@ -111,8 +109,8 @@ async fn test_into_split() {
 #[cfg(feature = "async")]
 #[tokio::test]
 async fn test_into_split_error() {
-    let pty1 = pty_process::Pty::new().unwrap();
-    let pty2 = pty_process::Pty::new().unwrap();
+    let (pty1, _) = pty_process::open().unwrap();
+    let (pty2, _) = pty_process::open().unwrap();
 
     let (pty1_r, pty1_w) = pty1.into_split();
     let (pty2_r, pty2_w) = pty2.into_split();

@@ -23,16 +23,14 @@ fn test_pipe_blocking() {
 
     let (read_fd, write_fd) = pipe();
 
-    let pty_from = pty_process::blocking::Pty::new().unwrap();
-    let pts_from = pty_from.pts().unwrap();
+    let (pty_from, pts_from) = pty_process::blocking::open().unwrap();
     pty_from.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut cmd_from = pty_process::blocking::Command::new("seq");
     cmd_from.args(["1", "10"]);
     cmd_from.stdout(std::process::Stdio::from(write_fd));
     let mut child_from = cmd_from.spawn(&pts_from).unwrap();
 
-    let mut pty_to = pty_process::blocking::Pty::new().unwrap();
-    let pts_to = pty_to.pts().unwrap();
+    let (mut pty_to, pts_to) = pty_process::blocking::open().unwrap();
     let mut cmd_to = pty_process::blocking::Command::new("tac");
     cmd_to.stdin(std::process::Stdio::from(read_fd));
     let mut child_to = cmd_to.spawn(&pts_to).unwrap();
@@ -61,16 +59,14 @@ async fn test_pipe_async() {
 
     let (read_fd, write_fd) = pipe();
 
-    let pty_from = pty_process::Pty::new().unwrap();
-    let pts_from = pty_from.pts().unwrap();
+    let (pty_from, pts_from) = pty_process::open().unwrap();
     pty_from.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut cmd_from = pty_process::Command::new("seq");
     cmd_from.args(["1", "10"]);
     cmd_from.stdout(std::process::Stdio::from(write_fd));
     let mut child_from = cmd_from.spawn(&pts_from).unwrap();
 
-    let mut pty_to = pty_process::Pty::new().unwrap();
-    let pts_to = pty_to.pts().unwrap();
+    let (mut pty_to, pts_to) = pty_process::open().unwrap();
     let mut cmd_to = pty_process::Command::new("tac");
     cmd_to.stdin(std::process::Stdio::from(read_fd));
     let mut child_to = cmd_to.spawn(&pts_to).unwrap();

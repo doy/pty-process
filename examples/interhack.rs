@@ -80,8 +80,7 @@ mod main {
 async fn main() {
     use std::os::unix::process::ExitStatusExt as _;
 
-    let mut pty = pty_process::Pty::new().unwrap();
-    let pts = pty.pts().unwrap();
+    let (mut pty, pts) = pty_process::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let mut child = pty_process::Command::new("nethack").spawn(&pts).unwrap();
     main::run(&mut child, &mut pty).await.unwrap();
