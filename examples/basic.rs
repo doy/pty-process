@@ -2,7 +2,7 @@ mod raw_guard;
 
 mod main {
     use std::io::{Read as _, Write as _};
-    use std::os::fd::{AsFd as _, AsRawFd as _};
+    use std::os::fd::AsFd as _;
 
     pub fn run(
         child: &mut std::process::Child,
@@ -10,12 +10,12 @@ mod main {
     ) {
         let _raw = super::raw_guard::RawGuard::new();
         let mut buf = [0_u8; 4096];
-        let pty_fd = pty.as_fd().as_raw_fd();
-        let stdin_fd = std::io::stdin().as_raw_fd();
+        let stdin = std::io::stdin();
+        let stdin_fd = stdin.as_fd();
 
         loop {
             let mut set = nix::sys::select::FdSet::new();
-            set.insert(pty_fd);
+            set.insert(pty.as_fd());
             set.insert(stdin_fd);
             match nix::sys::select::select(
                 None,
@@ -26,7 +26,9 @@ mod main {
             ) {
                 Ok(n) => {
                     if n > 0 {
-                        if set.contains(pty_fd) {
+                        let pty_ready = set.contains(pty.as_fd());
+                        let stdin_ready = set.contains(stdin_fd);
+                        if pty_ready {
                             match pty.read(&mut buf) {
                                 Ok(bytes) => {
                                     let buf = &buf[..bytes];
@@ -41,7 +43,7 @@ mod main {
                                 }
                             };
                         }
-                        if set.contains(stdin_fd) {
+                        if stdin_ready {
                             match std::io::stdin().read(&mut buf) {
                                 Ok(bytes) => {
                                     let buf = &buf[..bytes];
