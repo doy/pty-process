@@ -1,9 +1,9 @@
 /// Error type for errors from this crate
 #[derive(Debug)]
 pub enum Error {
-    /// error came from std::io::Error
+    /// error came from `std::io::Error`
     Io(std::io::Error),
-    /// error came from nix::Error
+    /// error came from `nix::Error`
     Rustix(rustix::io::Errno),
     /// unsplit was called on halves of two different ptys
     #[cfg(feature = "async")]

@@ -153,7 +153,7 @@ pub struct Pts(pub(crate) crate::sys::Pts);
 /// Borrowed read half of a [`Pty`]
 pub struct ReadPty<'a>(&'a AsyncPty);
 
-impl<'a> tokio::io::AsyncRead for ReadPty<'a> {
+impl tokio::io::AsyncRead for ReadPty<'_> {
     fn poll_read(
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
@@ -182,7 +182,7 @@ impl<'a> tokio::io::AsyncRead for ReadPty<'a> {
 /// Borrowed write half of a [`Pty`]
 pub struct WritePty<'a>(&'a AsyncPty);
 
-impl<'a> WritePty<'a> {
+impl WritePty<'_> {
     /// Change the terminal size associated with the pty.
     ///
     /// # Errors
@@ -192,7 +192,7 @@ impl<'a> WritePty<'a> {
     }
 }
 
-impl<'a> tokio::io::AsyncWrite for WritePty<'a> {
+impl tokio::io::AsyncWrite for WritePty<'_> {
     fn poll_write(
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,

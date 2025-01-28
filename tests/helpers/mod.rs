@@ -14,7 +14,7 @@ impl<'a> Output<'a> {
     }
 }
 
-impl<'a> Iterator for Output<'a> {
+impl Iterator for Output<'_> {
     type Item = String;
 
     fn next(&mut self) -> Option<Self::Item> {
