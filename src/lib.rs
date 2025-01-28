@@ -9,14 +9,13 @@
 //! ```no_run
 //! # #[cfg(feature = "async")]
 //! # #[tokio::main]
-//! # async fn main() -> pty_process::Result<()> {
+//! # async fn foo() -> pty_process::Result<()> {
 //! let (mut pty, pts) = pty_process::open()?;
 //! pty.resize(pty_process::Size::new(24, 80))?;
 //! let mut cmd = pty_process::Command::new("nethack");
 //! let child = cmd.spawn(pts)?;
 //! # Ok(())
 //! # }
-//! # #[cfg(not(feature = "async"))]
 //! # fn main() -> pty_process::Result<()> {
 //! let (mut pty, pts) = pty_process::blocking::open()?;
 //! pty.resize(pty_process::Size::new(24, 80))?;
