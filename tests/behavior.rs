@@ -75,10 +75,10 @@ fn test_multiple_configured() {
     let (pre_exec_pipe_r, pre_exec_pipe_w) = pipe();
     let mut pre_exec_pipe_r =
         std::io::BufReader::new(std::fs::File::from(pre_exec_pipe_r));
-    let mut cmd = pty_process::blocking::Command::new("perl");
-    cmd.arg("-Esay 'foo'; say STDERR 'foo-stderr'; open my $fh, '>&=3'; say $fh 'foo-3';")
+    let cmd = pty_process::blocking::Command::new("perl")
+        .arg("-Esay 'foo'; say STDERR 'foo-stderr'; open my $fh, '>&=3'; say $fh 'foo-3';")
         .stderr(std::process::Stdio::from(stderr_pipe_w));
-    unsafe {
+    let mut cmd = unsafe {
         cmd.pre_exec(move || {
             nix::unistd::dup2(pre_exec_pipe_w.as_raw_fd(), 3)?;
             nix::fcntl::fcntl(
@@ -86,8 +86,8 @@ fn test_multiple_configured() {
                 nix::fcntl::F_SETFD(nix::fcntl::FdFlag::empty()),
             )?;
             Ok(())
-        });
-    }
+        })
+    };
     let mut child = cmd.spawn_borrowed(&pts).unwrap();
 
     let mut output = helpers::output(&pty);
@@ -149,15 +149,15 @@ async fn test_multiple_configured_async() {
     let mut pre_exec_pipe_r = tokio::io::BufReader::new(unsafe {
         tokio::fs::File::from_raw_fd(pre_exec_pipe_r.into_raw_fd())
     });
-    let mut cmd = pty_process::Command::new("perl");
-    cmd.arg(
-        "-Esay 'foo'; \
+    let cmd = pty_process::Command::new("perl")
+        .arg(
+            "-Esay 'foo'; \
             say STDERR 'foo-stderr'; \
             open my $fh, '>&=3'; \
             say $fh 'foo-3';",
-    )
-    .stderr(std::process::Stdio::from(stderr_pipe_w));
-    unsafe {
+        )
+        .stderr(std::process::Stdio::from(stderr_pipe_w));
+    let mut cmd = unsafe {
         cmd.pre_exec(move || {
             nix::unistd::dup2(pre_exec_pipe_w.as_raw_fd(), 3)?;
             nix::fcntl::fcntl(
@@ -165,8 +165,8 @@ async fn test_multiple_configured_async() {
                 nix::fcntl::F_SETFD(nix::fcntl::FdFlag::empty()),
             )?;
             Ok(())
-        });
-    }
+        })
+    };
     let mut child = cmd.spawn_borrowed(&pts).unwrap();
 
     let mut output = helpers::output_async(pty_r);

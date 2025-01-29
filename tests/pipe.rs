@@ -31,19 +31,18 @@ fn test_pipe_blocking() {
 
     let (pty_from, pts_from) = pty_process::blocking::open().unwrap();
     pty_from.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut cmd_from = pty_process::blocking::Command::new("seq");
-    cmd_from.args(["1", "10"]);
-    cmd_from.stdout(std::process::Stdio::from(write_fd));
+    let cmd_from = pty_process::blocking::Command::new("seq")
+        .args(["1", "10"])
+        .stdout(std::process::Stdio::from(write_fd));
     let mut child_from = cmd_from.spawn(pts_from).unwrap();
 
     let (mut pty_to, pts_to) = pty_process::blocking::open().unwrap();
-    let mut cmd_to = pty_process::blocking::Command::new("sh");
-    cmd_to.args(["-c", TAC]);
-    cmd_to.stdin(std::process::Stdio::from(read_fd));
+    let cmd_to = pty_process::blocking::Command::new("sh")
+        .args(["-c", TAC])
+        .stdin(std::process::Stdio::from(read_fd));
     let mut child_to = cmd_to.spawn(pts_to).unwrap();
 
     assert!(child_from.wait().unwrap().success());
-    drop(cmd_from);
 
     // wait for the `tac` process to finish generating output (we don't really
     // have a good way to detect when that happens)
@@ -68,19 +67,18 @@ async fn test_pipe_async() {
 
     let (pty_from, pts_from) = pty_process::open().unwrap();
     pty_from.resize(pty_process::Size::new(24, 80)).unwrap();
-    let mut cmd_from = pty_process::Command::new("seq");
-    cmd_from.args(["1", "10"]);
-    cmd_from.stdout(std::process::Stdio::from(write_fd));
+    let cmd_from = pty_process::Command::new("seq")
+        .args(["1", "10"])
+        .stdout(std::process::Stdio::from(write_fd));
     let mut child_from = cmd_from.spawn(pts_from).unwrap();
 
     let (mut pty_to, pts_to) = pty_process::open().unwrap();
-    let mut cmd_to = pty_process::Command::new("sh");
-    cmd_to.args(["-c", TAC]);
-    cmd_to.stdin(std::process::Stdio::from(read_fd));
+    let cmd_to = pty_process::Command::new("sh")
+        .args(["-c", TAC])
+        .stdin(std::process::Stdio::from(read_fd));
     let mut child_to = cmd_to.spawn(pts_to).unwrap();
 
     assert!(child_from.wait().await.unwrap().success());
-    drop(cmd_from);
 
     // wait for the `tac` process to finish generating output (we
     // don't really have a good way to detect when that happens)

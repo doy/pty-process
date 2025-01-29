@@ -24,13 +24,15 @@ impl Command {
     }
 
     /// See [`tokio::process::Command::arg`]
-    pub fn arg<S: AsRef<std::ffi::OsStr>>(&mut self, arg: S) -> &mut Self {
+    #[must_use]
+    pub fn arg<S: AsRef<std::ffi::OsStr>>(mut self, arg: S) -> Self {
         self.inner.arg(arg);
         self
     }
 
     /// See [`tokio::process::Command::args`]
-    pub fn args<I, S>(&mut self, args: I) -> &mut Self
+    #[must_use]
+    pub fn args<I, S>(mut self, args: I) -> Self
     where
         I: IntoIterator<Item = S>,
         S: AsRef<std::ffi::OsStr>,
@@ -40,7 +42,8 @@ impl Command {
     }
 
     /// See [`tokio::process::Command::env`]
-    pub fn env<K, V>(&mut self, key: K, val: V) -> &mut Self
+    #[must_use]
+    pub fn env<K, V>(mut self, key: K, val: V) -> Self
     where
         K: AsRef<std::ffi::OsStr>,
         V: AsRef<std::ffi::OsStr>,
@@ -50,7 +53,8 @@ impl Command {
     }
 
     /// See [`tokio::process::Command::envs`]
-    pub fn envs<I, K, V>(&mut self, vars: I) -> &mut Self
+    #[must_use]
+    pub fn envs<I, K, V>(mut self, vars: I) -> Self
     where
         I: IntoIterator<Item = (K, V)>,
         K: AsRef<std::ffi::OsStr>,
@@ -61,60 +65,52 @@ impl Command {
     }
 
     /// See [`tokio::process::Command::env_remove`]
-    pub fn env_remove<K: AsRef<std::ffi::OsStr>>(
-        &mut self,
-        key: K,
-    ) -> &mut Self {
+    #[must_use]
+    pub fn env_remove<K: AsRef<std::ffi::OsStr>>(mut self, key: K) -> Self {
         self.inner.env_remove(key);
         self
     }
 
     /// See [`tokio::process::Command::env_clear`]
-    pub fn env_clear(&mut self) -> &mut Self {
+    #[must_use]
+    pub fn env_clear(mut self) -> Self {
         self.inner.env_clear();
         self
     }
 
     /// See [`tokio::process::Command::current_dir`]
-    pub fn current_dir<P: AsRef<std::path::Path>>(
-        &mut self,
-        dir: P,
-    ) -> &mut Self {
+    #[must_use]
+    pub fn current_dir<P: AsRef<std::path::Path>>(mut self, dir: P) -> Self {
         self.inner.current_dir(dir);
         self
     }
 
     /// See [`tokio::process::Command::kill_on_drop`]
-    pub fn kill_on_drop(&mut self, kill_on_drop: bool) -> &mut Self {
+    #[must_use]
+    pub fn kill_on_drop(mut self, kill_on_drop: bool) -> Self {
         self.inner.kill_on_drop(kill_on_drop);
         self
     }
 
     /// See [`tokio::process::Command::stdin`]
-    pub fn stdin<T: Into<std::process::Stdio>>(
-        &mut self,
-        cfg: T,
-    ) -> &mut Self {
+    #[must_use]
+    pub fn stdin<T: Into<std::process::Stdio>>(mut self, cfg: T) -> Self {
         self.stdin = true;
         self.inner.stdin(cfg);
         self
     }
 
     /// See [`tokio::process::Command::stdout`]
-    pub fn stdout<T: Into<std::process::Stdio>>(
-        &mut self,
-        cfg: T,
-    ) -> &mut Self {
+    #[must_use]
+    pub fn stdout<T: Into<std::process::Stdio>>(mut self, cfg: T) -> Self {
         self.stdout = true;
         self.inner.stdout(cfg);
         self
     }
 
     /// See [`tokio::process::Command::stderr`]
-    pub fn stderr<T: Into<std::process::Stdio>>(
-        &mut self,
-        cfg: T,
-    ) -> &mut Self {
+    #[must_use]
+    pub fn stderr<T: Into<std::process::Stdio>>(mut self, cfg: T) -> Self {
         self.stderr = true;
         self.inner.stderr(cfg);
         self
@@ -137,7 +133,7 @@ impl Command {
     /// session leader or set its controlling terminal.
     #[allow(clippy::needless_pass_by_value)]
     pub fn spawn(
-        &mut self,
+        mut self,
         pts: crate::Pts,
     ) -> crate::Result<tokio::process::Child> {
         self.spawn_impl(&pts)
@@ -206,20 +202,23 @@ impl Command {
     }
 
     /// See [`tokio::process::Command::uid`]
-    pub fn uid(&mut self, id: u32) -> &mut Self {
+    #[must_use]
+    pub fn uid(mut self, id: u32) -> Self {
         self.inner.uid(id);
         self
     }
 
     /// See [`tokio::process::Command::gid`]
-    pub fn gid(&mut self, id: u32) -> &mut Self {
+    #[must_use]
+    pub fn gid(mut self, id: u32) -> Self {
         self.inner.gid(id);
         self
     }
 
     /// See [`tokio::process::Command::pre_exec`]
     #[allow(clippy::missing_safety_doc)]
-    pub unsafe fn pre_exec<F>(&mut self, f: F) -> &mut Self
+    #[must_use]
+    pub unsafe fn pre_exec<F>(mut self, f: F) -> Self
     where
         F: FnMut() -> std::io::Result<()> + Send + Sync + 'static,
     {
@@ -228,7 +227,8 @@ impl Command {
     }
 
     /// See [`tokio::process::Command::arg0`]
-    pub fn arg0<S>(&mut self, arg: S) -> &mut Self
+    #[must_use]
+    pub fn arg0<S>(mut self, arg: S) -> Self
     where
         S: AsRef<std::ffi::OsStr>,
     {
