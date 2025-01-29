@@ -299,6 +299,7 @@ async fn test_session_leader_async() {
     assert_eq!(status.code().unwrap(), 0);
 }
 
+#[cfg(not(target_os = "macos"))]
 fn pipe() -> (std::os::fd::OwnedFd, std::os::fd::OwnedFd) {
     nix::unistd::pipe().unwrap()
 }
