@@ -26,9 +26,9 @@
 //! ```
 //!
 //! The returned `child` is a normal instance of [`tokio::process::Child`] (or
-//! [`std::process::Child`] for the [`blocking`](crate::blocking) variant),
-//! with its `stdin`/`stdout`/`stderr` file descriptors pointing at the given
-//! pty. The `pty` instance implements [`tokio::io::AsyncRead`] and
+//! [`std::process::Child`] for the [`blocking`] variant), with its
+//! `stdin`/`stdout`/`stderr` file descriptors pointing at the given pty. The
+//! `pty` instance implements [`tokio::io::AsyncRead`] and
 //! [`tokio::io::AsyncWrite`] (or [`std::io::Read`] and [`std::io::Write`] for
 //! the [`blocking`] variant), and can be used to communicate with the child
 //! process. The child process will also be made a session leader of a new
@@ -37,8 +37,8 @@
 //!
 //! # Features
 //!
-//! By default, only the [`blocking`](crate::blocking) APIs are available. To
-//! include the asynchronous APIs, you must enable the `async` feature.
+//! By default, only the [`blocking`] APIs are available. To include the
+//! asynchronous APIs, you must enable the `async` feature.
 
 #![warn(clippy::cargo)]
 #![warn(clippy::pedantic)]
