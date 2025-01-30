@@ -73,5 +73,5 @@ impl std::io::Write for &Pty {
 
 /// The child end of the pty
 ///
-/// See [`Pty::pts`] and [`Command::spawn`](crate::blocking::Command::spawn)
+/// See [`open`] and [`Command::spawn`](crate::blocking::Command::spawn)
 pub struct Pts(pub(crate) crate::sys::Pts);

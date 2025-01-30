@@ -138,7 +138,7 @@ impl tokio::io::AsyncWrite for Pty {
 
 /// The child end of the pty
 ///
-/// See [`Pty::pts`] and [`Command::spawn`](crate::Command::spawn)
+/// See [`open`] and [`Command::spawn`](crate::Command::spawn)
 pub struct Pts(pub(crate) crate::sys::Pts);
 
 /// Borrowed read half of a [`Pty`]
