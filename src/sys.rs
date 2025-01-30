@@ -1,6 +1,6 @@
 use std::os::{
     fd::{AsRawFd as _, FromRawFd as _},
-    unix::prelude::OsStrExt as _,
+    unix::prelude::{OpenOptionsExt as _, OsStrExt as _},
 };
 
 #[derive(Debug)]
@@ -33,6 +33,7 @@ impl Pty {
         Ok(Pts(std::fs::OpenOptions::new()
             .read(true)
             .write(true)
+            .custom_flags(libc::O_NOCTTY)
             .open(std::ffi::OsStr::from_bytes(
                 rustix::pty::ptsname(&self.0, vec![])?.as_bytes(),
             ))?
