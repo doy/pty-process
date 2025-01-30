@@ -65,5 +65,5 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo doc
+      - run: RUSTDOCFLAGS="-Dwarnings" cargo doc --all-features
       - run: cargo test --doc --all-features
