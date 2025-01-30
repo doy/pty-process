@@ -1,5 +1,26 @@
 # Changelog
 
+## [0.5.0] - 2025-01-29
+
+### Added
+
+* `kill_on_drop` to match the tokio::process::Command behavior. (Samuel
+  Ainsworth, #11)
+* `from_fd` to unsafely create a Pty from an OwnedFd. (YtvwlD, #12)
+
+### Changed
+
+* Changed the `Command` builder API slightly to be harder to misuse on
+  platforms (such as macos) which require opening a pts before doing any
+  operations on the pty, and which don't support spawning more than one
+  process onto a pts.
+
+### Fixed
+
+* macos should be better supported now.
+* Spawning a process without an existing controlling terminal should now work.
+  (Chris Pick, #16)
+
 ## [0.4.0] - 2023-08-06
 
 ### Changed
