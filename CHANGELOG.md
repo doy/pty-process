@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.1] - 2025-01-29
+
+### Added
+
+* `as_fd` and `as_raw_fd` for `Pts` instances
+
 ## [0.5.0] - 2025-01-29
 
 ### Added
