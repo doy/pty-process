@@ -33,7 +33,9 @@ impl Pty {
         Ok(Pts(std::fs::OpenOptions::new()
             .read(true)
             .write(true)
-            .custom_flags(libc::O_NOCTTY)
+            .custom_flags(
+                rustix::fs::OFlags::NOCTTY.bits().try_into().unwrap(),
+            )
             .open(std::ffi::OsStr::from_bytes(
                 rustix::pty::ptsname(&self.0, vec![])?.as_bytes(),
             ))?
