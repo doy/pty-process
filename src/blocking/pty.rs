@@ -96,3 +96,15 @@ impl Pts {
         Self(crate::sys::Pts::from_fd(fd))
     }
 }
+
+impl std::os::fd::AsFd for Pts {
+    fn as_fd(&self) -> std::os::fd::BorrowedFd<'_> {
+        self.0.as_fd()
+    }
+}
+
+impl std::os::fd::AsRawFd for Pts {
+    fn as_raw_fd(&self) -> std::os::fd::RawFd {
+        self.0.as_raw_fd()
+    }
+}
