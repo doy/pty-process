@@ -22,6 +22,10 @@ impl Pty {
         Ok(Self(pt))
     }
 
+    pub unsafe fn from_fd(fd: std::os::fd::OwnedFd) -> Self {
+        Self(fd)
+    }
+
     pub fn set_term_size(&self, size: crate::Size) -> crate::Result<()> {
         Ok(rustix::termios::tcsetwinsize(
             &self.0,
@@ -116,6 +120,10 @@ impl std::io::Write for &Pty {
 pub struct Pts(std::os::fd::OwnedFd);
 
 impl Pts {
+    pub unsafe fn from_fd(fd: std::os::fd::OwnedFd) -> Self {
+        Self(fd)
+    }
+
     pub fn setup_subprocess(
         &self,
     ) -> std::io::Result<(

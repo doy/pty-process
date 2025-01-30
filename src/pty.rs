@@ -21,6 +21,20 @@ pub fn open() -> crate::Result<(Pty, Pts)> {
 pub struct Pty(AsyncPty);
 
 impl Pty {
+    /// Use the provided file descriptor as a pty.
+    ///
+    /// # Safety
+    /// The provided file descriptor must be valid, open, belong to a pty,
+    /// and put into nonblocking mode.
+    ///
+    /// # Errors
+    /// Returns an error if it fails to be registered with the async runtime.
+    pub unsafe fn from_fd(fd: std::os::fd::OwnedFd) -> crate::Result<Self> {
+        Ok(Self(tokio::io::unix::AsyncFd::new(
+            crate::sys::Pty::from_fd(fd),
+        )?))
+    }
+
     /// Change the terminal size associated with the pty.
     ///
     /// # Errors
@@ -140,6 +154,18 @@ impl tokio::io::AsyncWrite for Pty {
 ///
 /// See [`open`] and [`Command::spawn`](crate::Command::spawn)
 pub struct Pts(pub(crate) crate::sys::Pts);
+
+impl Pts {
+    /// Use the provided file descriptor as a pts.
+    ///
+    /// # Safety
+    /// The provided file descriptor must be valid, open, and belong to the
+    /// child end of a pty.
+    #[must_use]
+    pub unsafe fn from_fd(fd: std::os::fd::OwnedFd) -> Self {
+        Self(crate::sys::Pts::from_fd(fd))
+    }
+}
 
 /// Borrowed read half of a [`Pty`]
 pub struct ReadPty<'a>(&'a AsyncPty);
