@@ -48,6 +48,12 @@ impl std::os::fd::AsRawFd for Pty {
     }
 }
 
+impl std::os::fd::AsRawFd for &Pty {
+    fn as_raw_fd(&self) -> std::os::fd::RawFd {
+        self.0.as_raw_fd()
+    }
+}
+
 impl std::io::Read for Pty {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         self.0.read(buf)
