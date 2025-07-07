@@ -71,5 +71,5 @@ pub use command::Command;
 mod pty;
 #[cfg(feature = "async")]
 pub use pty::{
-    open, OwnedReadPty, OwnedWritePty, Pts, Pty, ReadPty, WritePty,
+    OwnedReadPty, OwnedWritePty, Pts, Pty, ReadPty, WritePty, open,
 };

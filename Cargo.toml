@@ -2,7 +2,7 @@
 name = "pty-process"
 version = "0.5.1"
 authors = ["Jesse Luehrs <doy@tozt.net>"]
-edition = "2021"
+edition = "2024"
 
 description = "spawn commands attached to a pty"
 repository = "https://git.tozt.net/pty-process"
