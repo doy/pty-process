@@ -23,7 +23,7 @@ mod main {
                         pty.write_all(&in_buf[..bytes]).await.unwrap();
                     }
                     Err(e) => {
-                        eprintln!("stdin read failed: {:?}", e);
+                        eprintln!("stdin read failed: {e:?}");
                         break;
                     }
                 },
@@ -33,7 +33,7 @@ mod main {
                         stdout.flush().await.unwrap();
                     }
                     Err(e) => {
-                        eprintln!("pty read failed: {:?}", e);
+                        eprintln!("pty read failed: {e:?}");
                         break;
                     }
                 },

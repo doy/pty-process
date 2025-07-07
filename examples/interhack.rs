@@ -42,7 +42,7 @@ mod main {
                         }
                     }
                     Err(e) => {
-                        eprintln!("stdin read failed: {:?}", e);
+                        eprintln!("stdin read failed: {e:?}");
                         break;
                     }
                 },
@@ -63,7 +63,7 @@ mod main {
                         stdout.flush().await.unwrap();
                     }
                     Err(e) => {
-                        eprintln!("pty read failed: {:?}", e);
+                        eprintln!("pty read failed: {e:?}");
                         break;
                     }
                 },

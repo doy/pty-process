@@ -295,7 +295,7 @@ async fn test_session_leader_async() {
     assert_eq!(output.next().await.unwrap(), "True\r\n");
 
     let status = child.wait().await.unwrap();
-    eprintln!("{:?}", status);
+    eprintln!("{status:?}");
     assert_eq!(status.code().unwrap(), 0);
 }
 

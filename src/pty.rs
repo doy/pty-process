@@ -102,7 +102,7 @@ impl tokio::io::AsyncRead for Pty {
                     return std::task::Poll::Ready(Ok(()));
                 }
                 Ok(Err(e)) => return std::task::Poll::Ready(Err(e)),
-                Err(_would_block) => continue,
+                Err(_would_block) => {}
             }
         }
     }
@@ -121,7 +121,7 @@ impl tokio::io::AsyncWrite for Pty {
             }?;
             match guard.try_io(|inner| inner.get_ref().write(buf)) {
                 Ok(result) => return std::task::Poll::Ready(result),
-                Err(_would_block) => continue,
+                Err(_would_block) => {}
             }
         }
     }
@@ -137,7 +137,7 @@ impl tokio::io::AsyncWrite for Pty {
             }?;
             match guard.try_io(|inner| inner.get_ref().flush()) {
                 Ok(_) => return std::task::Poll::Ready(Ok(())),
-                Err(_would_block) => continue,
+                Err(_would_block) => {}
             }
         }
     }
@@ -202,7 +202,7 @@ impl tokio::io::AsyncRead for ReadPty<'_> {
                     return std::task::Poll::Ready(Ok(()));
                 }
                 Ok(Err(e)) => return std::task::Poll::Ready(Err(e)),
-                Err(_would_block) => continue,
+                Err(_would_block) => {}
             }
         }
     }
@@ -234,7 +234,7 @@ impl tokio::io::AsyncWrite for WritePty<'_> {
             }?;
             match guard.try_io(|inner| inner.get_ref().write(buf)) {
                 Ok(result) => return std::task::Poll::Ready(result),
-                Err(_would_block) => continue,
+                Err(_would_block) => {}
             }
         }
     }
@@ -250,7 +250,7 @@ impl tokio::io::AsyncWrite for WritePty<'_> {
             }?;
             match guard.try_io(|inner| inner.get_ref().flush()) {
                 Ok(_) => return std::task::Poll::Ready(Ok(())),
-                Err(_would_block) => continue,
+                Err(_would_block) => {}
             }
         }
     }
@@ -313,7 +313,7 @@ impl tokio::io::AsyncRead for OwnedReadPty {
                     return std::task::Poll::Ready(Ok(()));
                 }
                 Ok(Err(e)) => return std::task::Poll::Ready(Err(e)),
-                Err(_would_block) => continue,
+                Err(_would_block) => {}
             }
         }
     }
@@ -346,7 +346,7 @@ impl tokio::io::AsyncWrite for OwnedWritePty {
             }?;
             match guard.try_io(|inner| inner.get_ref().write(buf)) {
                 Ok(result) => return std::task::Poll::Ready(result),
-                Err(_would_block) => continue,
+                Err(_would_block) => {}
             }
         }
     }
@@ -362,7 +362,7 @@ impl tokio::io::AsyncWrite for OwnedWritePty {
             }?;
             match guard.try_io(|inner| inner.get_ref().flush()) {
                 Ok(_) => return std::task::Poll::Ready(Ok(())),
-                Err(_would_block) => continue,
+                Err(_would_block) => {}
             }
         }
     }

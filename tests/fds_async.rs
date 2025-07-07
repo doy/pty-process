@@ -7,7 +7,7 @@ fn test_fds_async() {
 
     let mut expected = String::new();
     for fd in get_open_fds() {
-        expected.push_str(&format!("{}", fd));
+        expected.push_str(&format!("{fd}"));
     }
 
     let rt = tokio::runtime::Builder::new_multi_thread()
