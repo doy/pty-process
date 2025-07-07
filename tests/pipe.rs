@@ -101,14 +101,12 @@ fn pipe() -> (std::os::fd::OwnedFd, std::os::fd::OwnedFd) {
     (r, w)
 }
 
-fn cloexec<Fd: std::os::fd::AsRawFd>(fd: &Fd) {
-    let flags =
-        nix::fcntl::fcntl(fd.as_raw_fd(), nix::fcntl::FcntlArg::F_GETFD)
-            .unwrap();
+fn cloexec<Fd: std::os::fd::AsFd>(fd: &Fd) {
+    let flags = nix::fcntl::fcntl(fd, nix::fcntl::FcntlArg::F_GETFD).unwrap();
     let mut flags = nix::fcntl::FdFlag::from_bits(flags).unwrap();
     flags |= nix::fcntl::FdFlag::FD_CLOEXEC;
     nix::fcntl::fcntl(
-        fd.as_raw_fd(),
+        fd,
         nix::fcntl::FcntlArg::F_SETFD(nix::fcntl::FdFlag::FD_CLOEXEC),
     )
     .unwrap();

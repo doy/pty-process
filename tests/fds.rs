@@ -42,7 +42,12 @@ fn test_fds() {
 #[track_caller]
 fn check_open_fds(expected: Option<&[i32]>) -> Vec<i32> {
     let open: Vec<_> = (0..=255)
-        .filter(|fd| nix::sys::stat::fstat(*fd).is_ok())
+        .filter(|fd| {
+            nix::sys::stat::fstat(unsafe {
+                std::os::fd::BorrowedFd::borrow_raw(*fd)
+            })
+            .is_ok()
+        })
         .collect();
     assert!(open.contains(&0));
     assert!(open.contains(&1));

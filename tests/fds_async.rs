@@ -100,6 +100,11 @@ fn check_open_fds(expected: &[i32]) {
 #[cfg(feature = "async")]
 fn get_open_fds() -> Vec<i32> {
     (0..=255)
-        .filter(|fd| nix::sys::stat::fstat(*fd).is_ok())
+        .filter(|fd| {
+            nix::sys::stat::fstat(unsafe {
+                std::os::fd::BorrowedFd::borrow_raw(*fd)
+            })
+            .is_ok()
+        })
         .collect()
 }

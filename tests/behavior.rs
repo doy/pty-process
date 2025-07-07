@@ -64,7 +64,8 @@ async fn test_multiple_async() {
 #[test]
 fn test_multiple_configured() {
     use std::io::BufRead as _;
-    use std::os::fd::AsRawFd as _;
+    use std::os::fd::FromRawFd as _;
+    use std::os::fd::IntoRawFd as _;
 
     let (pty, pts) = pty_process::blocking::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
@@ -80,11 +81,13 @@ fn test_multiple_configured() {
         .stderr(std::process::Stdio::from(stderr_pipe_w));
     let mut cmd = unsafe {
         cmd.pre_exec(move || {
-            nix::unistd::dup2(pre_exec_pipe_w.as_raw_fd(), 3)?;
+            let mut three = std::os::fd::OwnedFd::from_raw_fd(3);
+            nix::unistd::dup2(&pre_exec_pipe_w, &mut three)?;
             nix::fcntl::fcntl(
-                3,
+                &three,
                 nix::fcntl::F_SETFD(nix::fcntl::FdFlag::empty()),
             )?;
+            let _ = three.into_raw_fd();
             Ok(())
         })
     };
@@ -134,7 +137,7 @@ fn test_multiple_configured() {
 #[tokio::test]
 async fn test_multiple_configured_async() {
     use futures::stream::StreamExt as _;
-    use std::os::fd::{AsRawFd as _, FromRawFd as _, IntoRawFd as _};
+    use std::os::fd::{FromRawFd as _, IntoRawFd as _};
     use tokio::io::AsyncBufReadExt as _;
 
     let (mut pty, pts) = pty_process::open().unwrap();
@@ -159,11 +162,13 @@ async fn test_multiple_configured_async() {
         .stderr(std::process::Stdio::from(stderr_pipe_w));
     let mut cmd = unsafe {
         cmd.pre_exec(move || {
-            nix::unistd::dup2(pre_exec_pipe_w.as_raw_fd(), 3)?;
+            let mut three = std::os::fd::OwnedFd::from_raw_fd(3);
+            nix::unistd::dup2(&pre_exec_pipe_w, &mut three)?;
             nix::fcntl::fcntl(
-                3,
+                &three,
                 nix::fcntl::F_SETFD(nix::fcntl::FdFlag::empty()),
             )?;
+            let _ = three.into_raw_fd();
             Ok(())
         })
     };
