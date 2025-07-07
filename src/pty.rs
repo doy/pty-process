@@ -30,9 +30,9 @@ impl Pty {
     /// # Errors
     /// Returns an error if it fails to be registered with the async runtime.
     pub unsafe fn from_fd(fd: std::os::fd::OwnedFd) -> crate::Result<Self> {
-        Ok(Self(tokio::io::unix::AsyncFd::new(
-            crate::sys::Pty::from_fd(fd),
-        )?))
+        Ok(Self(tokio::io::unix::AsyncFd::new(unsafe {
+            crate::sys::Pty::from_fd(fd)
+        })?))
     }
 
     /// Change the terminal size associated with the pty.
@@ -163,7 +163,7 @@ impl Pts {
     /// child end of a pty.
     #[must_use]
     pub unsafe fn from_fd(fd: std::os::fd::OwnedFd) -> Self {
-        Self(crate::sys::Pts::from_fd(fd))
+        Self(unsafe { crate::sys::Pts::from_fd(fd) })
     }
 }
 

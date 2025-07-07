@@ -18,7 +18,7 @@ impl Pty {
     /// The provided file descriptor must be valid, open, and belong to a pty.
     #[must_use]
     pub unsafe fn from_fd(fd: std::os::fd::OwnedFd) -> Self {
-        Self(crate::sys::Pty::from_fd(fd))
+        unsafe { Self(crate::sys::Pty::from_fd(fd)) }
     }
 
     /// Change the terminal size associated with the pty.
@@ -93,7 +93,7 @@ impl Pts {
     /// child end of a pty.
     #[must_use]
     pub unsafe fn from_fd(fd: std::os::fd::OwnedFd) -> Self {
-        Self(crate::sys::Pts::from_fd(fd))
+        unsafe { Self(crate::sys::Pts::from_fd(fd)) }
     }
 }
 
