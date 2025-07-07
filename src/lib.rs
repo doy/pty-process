@@ -52,6 +52,7 @@
 #![allow(clippy::too_many_arguments)]
 #![allow(clippy::too_many_lines)]
 #![allow(clippy::type_complexity)]
+#![cfg_attr(docsrs, feature(doc_auto_cfg))]
 
 mod error;
 pub use error::{Error, Result};

@@ -27,3 +27,6 @@ tokio = { version = "1.43.0", features = ["full"] }
 default = []
 
 async = ["tokio"]
+
+[package.metadata.docs.rs]
+all-features = true
