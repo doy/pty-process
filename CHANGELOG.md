@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.2] - 2025-07-07
+
+### Fixed
+
+* make documentation for async code show up on docs.rs
+
 ## [0.5.1] - 2025-01-29
 
 ### Added
