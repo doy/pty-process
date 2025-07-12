@@ -283,17 +283,22 @@ fn poll_read(
             std::task::Poll::Ready(guard) => guard,
             std::task::Poll::Pending => return std::task::Poll::Pending,
         }?;
-        let initialized_bytes = buf.initialized().len();
+        let prev_filled = buf.filled().len();
         // SAFETY: we only pass b to read_buf, which never uninitializes any
         // part of the buffer it is given
         let b = unsafe { buf.unfilled_mut() };
         match guard.try_io(|inner| inner.get_ref().read_buf(b)) {
             Ok(Ok((filled, _unfilled))) => {
                 let bytes = filled.len();
-                // SAFETY: read_buf initializes and fills bytes at the same
-                // time, so we can advance the initialized pointer by the
-                // number of bytes that were filled
-                unsafe { buf.assume_init(initialized_bytes + bytes) };
+                // SAFETY: read_buf is given a buffer that starts at the end
+                // of the filled section, and then both initializes and fills
+                // some amount of the buffer after that (and never
+                // deinitializes anything). we know that at least this many
+                // bytes have been initialized (they either were filled and
+                // initialized previously, or the call to read_buf did), and
+                // assume_init will ignore any attempts to shrink the
+                // initialized space, so this call is always safe.
+                unsafe { buf.assume_init(prev_filled + bytes) };
                 buf.advance(bytes);
                 return std::task::Poll::Ready(Ok(()));
             }
