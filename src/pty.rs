@@ -88,24 +88,7 @@ impl tokio::io::AsyncRead for Pty {
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf,
     ) -> std::task::Poll<std::io::Result<()>> {
-        loop {
-            let mut guard = match self.0.poll_read_ready(cx) {
-                std::task::Poll::Ready(guard) => guard,
-                std::task::Poll::Pending => return std::task::Poll::Pending,
-            }?;
-            let initialized_bytes = buf.initialized().len();
-            let b = unsafe { buf.unfilled_mut() };
-            match guard.try_io(|inner| inner.get_ref().read_buf(b)) {
-                Ok(Ok((filled, _unfilled))) => {
-                    let bytes = filled.len();
-                    unsafe { buf.assume_init(initialized_bytes + bytes) };
-                    buf.advance(bytes);
-                    return std::task::Poll::Ready(Ok(()));
-                }
-                Ok(Err(e)) => return std::task::Poll::Ready(Err(e)),
-                Err(_would_block) => {}
-            }
-        }
+        poll_read(&self.0, cx, buf)
     }
 }
 
@@ -115,32 +98,14 @@ impl tokio::io::AsyncWrite for Pty {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> std::task::Poll<std::io::Result<usize>> {
-        loop {
-            let mut guard = match self.0.poll_write_ready(cx) {
-                std::task::Poll::Ready(guard) => guard,
-                std::task::Poll::Pending => return std::task::Poll::Pending,
-            }?;
-            match guard.try_io(|inner| inner.get_ref().write(buf)) {
-                Ok(result) => return std::task::Poll::Ready(result),
-                Err(_would_block) => {}
-            }
-        }
+        poll_write(&self.0, cx, buf)
     }
 
     fn poll_flush(
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<std::io::Result<()>> {
-        loop {
-            let mut guard = match self.0.poll_write_ready(cx) {
-                std::task::Poll::Ready(guard) => guard,
-                std::task::Poll::Pending => return std::task::Poll::Pending,
-            }?;
-            match guard.try_io(|inner| inner.get_ref().flush()) {
-                Ok(_) => return std::task::Poll::Ready(Ok(())),
-                Err(_would_block) => {}
-            }
-        }
+        poll_flush(&self.0, cx)
     }
 
     fn poll_shutdown(
@@ -189,24 +154,7 @@ impl tokio::io::AsyncRead for ReadPty<'_> {
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf,
     ) -> std::task::Poll<std::io::Result<()>> {
-        loop {
-            let mut guard = match self.0.poll_read_ready(cx) {
-                std::task::Poll::Ready(guard) => guard,
-                std::task::Poll::Pending => return std::task::Poll::Pending,
-            }?;
-            let initialized_bytes = buf.initialized().len();
-            let b = unsafe { buf.unfilled_mut() };
-            match guard.try_io(|inner| inner.get_ref().read_buf(b)) {
-                Ok(Ok((filled, _unfilled))) => {
-                    let bytes = filled.len();
-                    unsafe { buf.assume_init(initialized_bytes + bytes) };
-                    buf.advance(bytes);
-                    return std::task::Poll::Ready(Ok(()));
-                }
-                Ok(Err(e)) => return std::task::Poll::Ready(Err(e)),
-                Err(_would_block) => {}
-            }
-        }
+        poll_read(self.0, cx, buf)
     }
 }
 
@@ -229,32 +177,14 @@ impl tokio::io::AsyncWrite for WritePty<'_> {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> std::task::Poll<std::io::Result<usize>> {
-        loop {
-            let mut guard = match self.0.poll_write_ready(cx) {
-                std::task::Poll::Ready(guard) => guard,
-                std::task::Poll::Pending => return std::task::Poll::Pending,
-            }?;
-            match guard.try_io(|inner| inner.get_ref().write(buf)) {
-                Ok(result) => return std::task::Poll::Ready(result),
-                Err(_would_block) => {}
-            }
-        }
+        poll_write(self.0, cx, buf)
     }
 
     fn poll_flush(
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<std::io::Result<()>> {
-        loop {
-            let mut guard = match self.0.poll_write_ready(cx) {
-                std::task::Poll::Ready(guard) => guard,
-                std::task::Poll::Pending => return std::task::Poll::Pending,
-            }?;
-            match guard.try_io(|inner| inner.get_ref().flush()) {
-                Ok(_) => return std::task::Poll::Ready(Ok(())),
-                Err(_would_block) => {}
-            }
-        }
+        poll_flush(self.0, cx)
     }
 
     fn poll_shutdown(
@@ -301,24 +231,7 @@ impl tokio::io::AsyncRead for OwnedReadPty {
         cx: &mut std::task::Context<'_>,
         buf: &mut tokio::io::ReadBuf,
     ) -> std::task::Poll<std::io::Result<()>> {
-        loop {
-            let mut guard = match self.0.poll_read_ready(cx) {
-                std::task::Poll::Ready(guard) => guard,
-                std::task::Poll::Pending => return std::task::Poll::Pending,
-            }?;
-            let initialized_bytes = buf.initialized().len();
-            let b = unsafe { buf.unfilled_mut() };
-            match guard.try_io(|inner| inner.get_ref().read_buf(b)) {
-                Ok(Ok((filled, _unfilled))) => {
-                    let bytes = filled.len();
-                    unsafe { buf.assume_init(initialized_bytes + bytes) };
-                    buf.advance(bytes);
-                    return std::task::Poll::Ready(Ok(()));
-                }
-                Ok(Err(e)) => return std::task::Poll::Ready(Err(e)),
-                Err(_would_block) => {}
-            }
-        }
+        poll_read(&self.0, cx, buf)
     }
 }
 
@@ -342,32 +255,14 @@ impl tokio::io::AsyncWrite for OwnedWritePty {
         cx: &mut std::task::Context<'_>,
         buf: &[u8],
     ) -> std::task::Poll<std::io::Result<usize>> {
-        loop {
-            let mut guard = match self.0.poll_write_ready(cx) {
-                std::task::Poll::Ready(guard) => guard,
-                std::task::Poll::Pending => return std::task::Poll::Pending,
-            }?;
-            match guard.try_io(|inner| inner.get_ref().write(buf)) {
-                Ok(result) => return std::task::Poll::Ready(result),
-                Err(_would_block) => {}
-            }
-        }
+        poll_write(&self.0, cx, buf)
     }
 
     fn poll_flush(
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<std::io::Result<()>> {
-        loop {
-            let mut guard = match self.0.poll_write_ready(cx) {
-                std::task::Poll::Ready(guard) => guard,
-                std::task::Poll::Pending => return std::task::Poll::Pending,
-            }?;
-            match guard.try_io(|inner| inner.get_ref().flush()) {
-                Ok(_) => return std::task::Poll::Ready(Ok(())),
-                Err(_would_block) => {}
-            }
-        }
+        poll_flush(&self.0, cx)
     }
 
     fn poll_shutdown(
@@ -375,5 +270,63 @@ impl tokio::io::AsyncWrite for OwnedWritePty {
         _cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Result<(), std::io::Error>> {
         std::task::Poll::Ready(Ok(()))
+    }
+}
+
+fn poll_read(
+    pty: &AsyncPty,
+    cx: &mut std::task::Context<'_>,
+    buf: &mut tokio::io::ReadBuf,
+) -> std::task::Poll<std::io::Result<()>> {
+    loop {
+        let mut guard = match pty.poll_read_ready(cx) {
+            std::task::Poll::Ready(guard) => guard,
+            std::task::Poll::Pending => return std::task::Poll::Pending,
+        }?;
+        let initialized_bytes = buf.initialized().len();
+        let b = unsafe { buf.unfilled_mut() };
+        match guard.try_io(|inner| inner.get_ref().read_buf(b)) {
+            Ok(Ok((filled, _unfilled))) => {
+                let bytes = filled.len();
+                unsafe { buf.assume_init(initialized_bytes + bytes) };
+                buf.advance(bytes);
+                return std::task::Poll::Ready(Ok(()));
+            }
+            Ok(Err(e)) => return std::task::Poll::Ready(Err(e)),
+            Err(_would_block) => {}
+        }
+    }
+}
+
+fn poll_write(
+    pty: &AsyncPty,
+    cx: &mut std::task::Context<'_>,
+    buf: &[u8],
+) -> std::task::Poll<std::io::Result<usize>> {
+    loop {
+        let mut guard = match pty.poll_write_ready(cx) {
+            std::task::Poll::Ready(guard) => guard,
+            std::task::Poll::Pending => return std::task::Poll::Pending,
+        }?;
+        match guard.try_io(|inner| inner.get_ref().write(buf)) {
+            Ok(result) => return std::task::Poll::Ready(result),
+            Err(_would_block) => {}
+        }
+    }
+}
+
+fn poll_flush(
+    pty: &AsyncPty,
+    cx: &mut std::task::Context<'_>,
+) -> std::task::Poll<std::io::Result<()>> {
+    loop {
+        let mut guard = match pty.poll_write_ready(cx) {
+            std::task::Poll::Ready(guard) => guard,
+            std::task::Poll::Pending => return std::task::Poll::Pending,
+        }?;
+        match guard.try_io(|inner| inner.get_ref().flush()) {
+            Ok(_) => return std::task::Poll::Ready(Ok(())),
+            Err(_would_block) => {}
+        }
     }
 }
