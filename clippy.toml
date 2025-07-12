@@ -1,0 +1,2 @@
+# until https://github.com/tokio-rs/tokio/pull/7117 is released
+allowed-duplicate-crates = ["windows-sys"]
