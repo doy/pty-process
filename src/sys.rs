@@ -54,6 +54,14 @@ impl Pty {
 
         Ok(())
     }
+
+    pub fn read_buf<'a>(
+        &self,
+        buf: &'a mut [std::mem::MaybeUninit<u8>],
+    ) -> std::io::Result<(&'a mut [u8], &'a mut [std::mem::MaybeUninit<u8>])>
+    {
+        rustix::io::read(&self.0, buf).map_err(std::io::Error::from)
+    }
 }
 
 impl From<Pty> for std::os::fd::OwnedFd {

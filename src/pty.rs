@@ -1,6 +1,6 @@
 #![allow(clippy::module_name_repetitions)]
 
-use std::io::{Read as _, Write as _};
+use std::io::Write as _;
 
 type AsyncPty = tokio::io::unix::AsyncFd<crate::sys::Pty>;
 
@@ -93,11 +93,12 @@ impl tokio::io::AsyncRead for Pty {
                 std::task::Poll::Ready(guard) => guard,
                 std::task::Poll::Pending => return std::task::Poll::Pending,
             }?;
-            // XXX should be able to optimize this once read_buf is stabilized
-            // in std
-            let b = buf.initialize_unfilled();
-            match guard.try_io(|inner| inner.get_ref().read(b)) {
-                Ok(Ok(bytes)) => {
+            let initialized_bytes = buf.initialized().len();
+            let b = unsafe { buf.unfilled_mut() };
+            match guard.try_io(|inner| inner.get_ref().read_buf(b)) {
+                Ok(Ok((filled, _unfilled))) => {
+                    let bytes = filled.len();
+                    unsafe { buf.assume_init(initialized_bytes + bytes) };
                     buf.advance(bytes);
                     return std::task::Poll::Ready(Ok(()));
                 }
@@ -193,11 +194,12 @@ impl tokio::io::AsyncRead for ReadPty<'_> {
                 std::task::Poll::Ready(guard) => guard,
                 std::task::Poll::Pending => return std::task::Poll::Pending,
             }?;
-            // XXX should be able to optimize this once read_buf is stabilized
-            // in std
-            let b = buf.initialize_unfilled();
-            match guard.try_io(|inner| inner.get_ref().read(b)) {
-                Ok(Ok(bytes)) => {
+            let initialized_bytes = buf.initialized().len();
+            let b = unsafe { buf.unfilled_mut() };
+            match guard.try_io(|inner| inner.get_ref().read_buf(b)) {
+                Ok(Ok((filled, _unfilled))) => {
+                    let bytes = filled.len();
+                    unsafe { buf.assume_init(initialized_bytes + bytes) };
                     buf.advance(bytes);
                     return std::task::Poll::Ready(Ok(()));
                 }
@@ -304,11 +306,12 @@ impl tokio::io::AsyncRead for OwnedReadPty {
                 std::task::Poll::Ready(guard) => guard,
                 std::task::Poll::Pending => return std::task::Poll::Pending,
             }?;
-            // XXX should be able to optimize this once read_buf is stabilized
-            // in std
-            let b = buf.initialize_unfilled();
-            match guard.try_io(|inner| inner.get_ref().read(b)) {
-                Ok(Ok(bytes)) => {
+            let initialized_bytes = buf.initialized().len();
+            let b = unsafe { buf.unfilled_mut() };
+            match guard.try_io(|inner| inner.get_ref().read_buf(b)) {
+                Ok(Ok((filled, _unfilled))) => {
+                    let bytes = filled.len();
+                    unsafe { buf.assume_init(initialized_bytes + bytes) };
                     buf.advance(bytes);
                     return std::task::Poll::Ready(Ok(()));
                 }
