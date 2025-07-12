@@ -1,6 +1,6 @@
 [package]
 name = "pty-process"
-version = "0.5.2"
+version = "0.5.3"
 authors = ["Jesse Luehrs <doy@tozt.net>"]
 edition = "2024"
 

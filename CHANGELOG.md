@@ -1,5 +1,11 @@
 # Changelog
 
+## [0.5.3] - 2025-07-11
+
+### Changed
+
+* optimize async pty reads by not pre-initializing the given buffer
+
 ## [0.5.2] - 2025-07-07
 
 ### Fixed
