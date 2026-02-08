@@ -196,7 +196,7 @@ impl tokio::io::AsyncWrite for WritePty<'_> {
 }
 
 /// Owned read half of a [`Pty`]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OwnedReadPty(std::sync::Arc<AsyncPty>);
 
 impl OwnedReadPty {
@@ -236,7 +236,7 @@ impl tokio::io::AsyncRead for OwnedReadPty {
 }
 
 /// Owned write half of a [`Pty`]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct OwnedWritePty(std::sync::Arc<AsyncPty>);
 
 impl OwnedWritePty {
