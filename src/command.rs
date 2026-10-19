@@ -13,14 +13,7 @@ pub struct Command {
 impl Command {
     /// See [`tokio::process::Command::new`]
     pub fn new<S: AsRef<std::ffi::OsStr>>(program: S) -> Self {
-        Self {
-            inner: tokio::process::Command::new(program),
-            stdin: false,
-            stdout: false,
-            stderr: false,
-            pre_exec_set: false,
-            pre_exec: None,
-        }
+        tokio::process::Command::new(program).into()
     }
 
     /// See [`tokio::process::Command::arg`]
@@ -234,5 +227,18 @@ impl Command {
     {
         self.inner.arg0(arg);
         self
+    }
+}
+
+impl From<tokio::process::Command> for Command {
+    fn from(inner: tokio::process::Command) -> Self {
+        Self {
+            inner,
+            stdin: false,
+            stdout: false,
+            stderr: false,
+            pre_exec_set: false,
+            pre_exec: None,
+        }
     }
 }
