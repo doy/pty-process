@@ -68,3 +68,56 @@ async fn test_yes_async() {
 
     child.kill().await.unwrap()
 }
+
+#[cfg(feature = "async")]
+#[tokio::test]
+async fn test_buffer_initialization() {
+    use std::pin::Pin;
+    use std::task::{Context, Poll};
+    use tokio::io::AsyncRead;
+
+    let (mut pty, pts) = pty_process::open().unwrap();
+    pty.resize(pty_process::Size::new(24, 80)).unwrap();
+    let msg = "hello world";
+    let mut child = pty_process::Command::new("echo")
+        .arg(msg)
+        .spawn(pts)
+        .unwrap();
+
+    let mut buf = [std::mem::MaybeUninit::uninit(); 64];
+
+    let mut read_buf = tokio::io::ReadBuf::uninit(&mut buf);
+
+    let waker = futures::task::noop_waker();
+    let mut cx = Context::from_waker(&waker);
+
+    // first read: the whole output will fit into the buffer
+    loop {
+        match Pin::new(&mut pty).poll_read(&mut cx, &mut read_buf) {
+            Poll::Ready(Ok(())) => break,
+            Poll::Pending => {
+                tokio::time::sleep(std::time::Duration::from_millis(10))
+                    .await;
+            }
+            Poll::Ready(Err(e)) => panic!("Read failed: {}", e),
+        }
+    }
+    assert_eq!(read_buf.filled().len(), msg.len() + 2); // msg + "\r\n"
+    assert_eq!(read_buf.initialized().len(), read_buf.filled().len());
+
+    // second read: there will be no new data read
+    loop {
+        match Pin::new(&mut pty).poll_read(&mut cx, &mut read_buf) {
+            Poll::Ready(Ok(())) => break,
+            Poll::Pending => {
+                tokio::time::sleep(std::time::Duration::from_millis(10))
+                    .await;
+            }
+            Poll::Ready(Err(e)) => panic!("Read failed: {}", e),
+        }
+    }
+    assert_eq!(read_buf.filled().len(), msg.len() + 2);
+    assert_eq!(read_buf.initialized().len(), read_buf.filled().len());
+
+    child.wait().await.unwrap();
+}

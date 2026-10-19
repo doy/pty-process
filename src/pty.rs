@@ -283,7 +283,6 @@ fn poll_read(
             std::task::Poll::Ready(guard) => guard,
             std::task::Poll::Pending => return std::task::Poll::Pending,
         }?;
-        let prev_filled = buf.filled().len();
         // SAFETY: we only pass b to read_buf, which never uninitializes any
         // part of the buffer it is given
         let b = unsafe { buf.unfilled_mut() };
@@ -298,7 +297,7 @@ fn poll_read(
                 // initialized previously, or the call to read_buf did), and
                 // assume_init will ignore any attempts to shrink the
                 // initialized space, so this call is always safe.
-                unsafe { buf.assume_init(prev_filled + bytes) };
+                unsafe { buf.assume_init(bytes) };
                 buf.advance(bytes);
                 return std::task::Poll::Ready(Ok(()));
             }
