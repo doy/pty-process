@@ -79,7 +79,9 @@ async fn test_buffer_initialization() {
     let (mut pty, pts) = pty_process::open().unwrap();
     pty.resize(pty_process::Size::new(24, 80)).unwrap();
     let msg = "hello world";
-    let mut child = pty_process::Command::new("echo")
+    let mut child = pty_process::Command::new("perl")
+        .arg("-E")
+        .arg("say $ARGV[0]")
         .arg(msg)
         .spawn(pts)
         .unwrap();
