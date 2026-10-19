@@ -13,7 +13,8 @@ pub fn open() -> crate::Result<(Pty, Pts)> {
     let pty = crate::sys::Pty::open()?;
     let pts = pty.pts()?;
     pty.set_nonblocking()?;
-    let pty = tokio::io::unix::AsyncFd::new(pty)?;
+    // SAFETY: the pty only controls a single pty file, and we never close it
+    let pty = unsafe { tokio::io::unix::AsyncFd::register(pty) }?;
     Ok((Pty(pty), Pts(pts)))
 }
 
@@ -30,9 +31,11 @@ impl Pty {
     /// # Errors
     /// Returns an error if it fails to be registered with the async runtime.
     pub unsafe fn from_fd(fd: std::os::fd::OwnedFd) -> crate::Result<Self> {
-        Ok(Self(tokio::io::unix::AsyncFd::new(unsafe {
-            crate::sys::Pty::from_fd(fd)
-        })?))
+        // SAFETY: we require that the incoming pty is valid and open, and we
+        // never close it
+        Ok(Self(unsafe {
+            tokio::io::unix::AsyncFd::register(crate::sys::Pty::from_fd(fd))
+        }?))
     }
 
     /// Change the terminal size associated with the pty.

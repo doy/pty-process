@@ -5,6 +5,9 @@ pub enum Error {
     Io(std::io::Error),
     /// error came from `nix::Error`
     Rustix(rustix::io::Errno),
+    /// error came from `tokio::io::unix::AsyncFdRegisterError`
+    #[cfg(feature = "async")]
+    TokioAsyncFd(tokio::io::unix::AsyncFdRegisterError<crate::sys::Pty>),
     /// unsplit was called on halves of two different ptys
     #[cfg(feature = "async")]
     Unsplit(crate::OwnedReadPty, crate::OwnedWritePty),
@@ -15,6 +18,8 @@ impl std::fmt::Display for Error {
         match self {
             Self::Io(e) => write!(f, "{e}"),
             Self::Rustix(e) => write!(f, "{e}"),
+            #[cfg(feature = "async")]
+            Self::TokioAsyncFd(e) => write!(f, "{e}"),
             #[cfg(feature = "async")]
             Self::Unsplit(..) => {
                 write!(f, "unsplit called on halves of two different ptys")
@@ -35,11 +40,25 @@ impl std::convert::From<rustix::io::Errno> for Error {
     }
 }
 
+#[cfg(feature = "async")]
+impl
+    std::convert::From<tokio::io::unix::AsyncFdRegisterError<crate::sys::Pty>>
+    for Error
+{
+    fn from(
+        e: tokio::io::unix::AsyncFdRegisterError<crate::sys::Pty>,
+    ) -> Self {
+        Self::TokioAsyncFd(e)
+    }
+}
+
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
             Self::Io(e) => Some(e),
             Self::Rustix(e) => Some(e),
+            #[cfg(feature = "async")]
+            Self::TokioAsyncFd(e) => Some(e),
             #[cfg(feature = "async")]
             Self::Unsplit(..) => None,
         }
