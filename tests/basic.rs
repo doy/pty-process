@@ -113,7 +113,15 @@ async fn test_buffer_initialization() {
                 tokio::time::sleep(std::time::Duration::from_millis(10))
                     .await;
             }
-            Poll::Ready(Err(e)) => panic!("Read failed: {}", e),
+            Poll::Ready(Err(e)) => {
+                if e.raw_os_error()
+                    == Some(rustix::io::Errno::IO.raw_os_error())
+                {
+                    break;
+                } else {
+                    panic!("Read failed: {}", e)
+                }
+            }
         }
     }
     assert_eq!(read_buf.filled().len(), msg.len() + 2);
