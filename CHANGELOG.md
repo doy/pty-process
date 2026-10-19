@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.5.4] - 2026-10-19
+
+### Added
+
+* Allow converting from `tokio::process::Command` to `pty_process::Command`
+  and from `std::process::Command` to `pty_process::blocking::Command` (Ian
+  McKellar, #19)
+
+### Fixed
+
+* Fix incorrect usage of assume_init (Sergey Kuznetsov, #22)
+
 ## [0.5.3] - 2025-07-11
 
 ### Changed
