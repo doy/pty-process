@@ -15,14 +15,7 @@ pub struct Command {
 impl Command {
     /// See [`std::process::Command::new`]
     pub fn new<S: AsRef<std::ffi::OsStr>>(program: S) -> Self {
-        Self {
-            inner: std::process::Command::new(program),
-            stdin: false,
-            stdout: false,
-            stderr: false,
-            pre_exec_set: false,
-            pre_exec: None,
-        }
+        std::process::Command::new(program).into()
     }
 
     /// See [`std::process::Command::arg`]
@@ -229,5 +222,18 @@ impl Command {
     {
         self.inner.arg0(arg);
         self
+    }
+}
+
+impl From<std::process::Command> for Command {
+    fn from(inner: std::process::Command) -> Self {
+        Self {
+            inner,
+            stdin: false,
+            stdout: false,
+            stderr: false,
+            pre_exec_set: false,
+            pre_exec: None,
+        }
     }
 }
