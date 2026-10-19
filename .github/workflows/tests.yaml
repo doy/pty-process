@@ -68,6 +68,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
-      - run: cargo doc --no-deps
+      - run: cargo doc --no-deps --all-features
         env:
           RUSTDOCFLAGS: -D warnings
