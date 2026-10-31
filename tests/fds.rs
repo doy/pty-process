@@ -2,9 +2,17 @@ mod helpers;
 
 #[test]
 fn test_fds() {
+    // On illumos, grantpt(3C) looks up the tty group, which leaves libc
+    // holding a close-on-exec door to nscd for the rest of the process. Open
+    // one pty before taking the baseline so that door is already in it.
+    drop(pty_process::blocking::open().unwrap());
     let fds = check_open_fds(None);
-    let fds_strings: Vec<String> =
-        fds.iter().map(std::string::ToString::to_string).collect();
+    // The child inherits only the descriptors that survive exec.
+    let fds_strings: Vec<String> = fds
+        .iter()
+        .filter(|fd| !is_cloexec(**fd))
+        .map(std::string::ToString::to_string)
+        .collect();
     let expected_output = format!("{}\r\n", fds_strings.join(""));
 
     let (pty, pts) = pty_process::blocking::open().unwrap();
@@ -37,6 +45,16 @@ fn test_fds() {
     assert_eq!(status.code().unwrap(), 0);
     drop(pty);
     check_open_fds(Some(&fds));
+}
+
+fn is_cloexec(fd: i32) -> bool {
+    let flags = nix::fcntl::fcntl(
+        unsafe { std::os::fd::BorrowedFd::borrow_raw(fd) },
+        nix::fcntl::FcntlArg::F_GETFD,
+    )
+    .unwrap();
+    nix::fcntl::FdFlag::from_bits_truncate(flags)
+        .contains(nix::fcntl::FdFlag::FD_CLOEXEC)
 }
 
 #[track_caller]
