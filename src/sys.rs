@@ -146,7 +146,13 @@ fn push_streams_modules(fd: &std::os::fd::OwnedFd) -> std::io::Result<()> {
     if present == 0 {
         for module in [c"ptem", c"ldterm", c"ttcompat"] {
             // Safety: as above.
-            if unsafe { libc::ioctl(fd, libc::I_PUSH, module.as_ptr()) } < 0 {
+            // __I_PUSH_NOCTTY rather than I_PUSH: pushing ldterm makes the
+            // stream a tty, and a session leader with no controlling
+            // terminal (a daemon) would otherwise acquire it as one.
+            if unsafe {
+                libc::ioctl(fd, libc::__I_PUSH_NOCTTY, module.as_ptr())
+            } < 0
+            {
                 return Err(std::io::Error::last_os_error());
             }
         }
