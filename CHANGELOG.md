@@ -1,5 +1,12 @@
 # Changelog
 
+## [Unreleased]
+
+### Fixed
+
+* Push the ptem, ldterm and ttcompat STREAMS modules onto the pts on illumos
+  and Solaris, so resizing the pty no longer fails with EINVAL
+
 ## [0.5.4] - 2026-10-19
 
 ### Added

@@ -34,7 +34,7 @@ impl Pty {
     }
 
     pub fn pts(&self) -> crate::Result<Pts> {
-        Ok(Pts(std::fs::OpenOptions::new()
+        let pts = Pts(std::fs::OpenOptions::new()
             .read(true)
             .write(true)
             .custom_flags(
@@ -43,7 +43,10 @@ impl Pty {
             .open(std::ffi::OsStr::from_bytes(
                 rustix::pty::ptsname(&self.0, vec![])?.as_bytes(),
             ))?
-            .into()))
+            .into());
+        #[cfg(any(target_os = "illumos", target_os = "solaris"))]
+        push_streams_modules(&pts.0)?;
+        Ok(pts)
     }
 
     #[cfg(feature = "async")]
@@ -123,6 +126,38 @@ impl std::io::Write for &Pty {
     fn flush(&mut self) -> std::io::Result<()> {
         Ok(())
     }
+}
+
+// On illumos and Solaris a pty is a pair of STREAMS devices, and the
+// subordinate side is a bare stream until the terminal modules are pushed
+// onto it: ptem keeps the window size and ldterm is the line discipline.
+// Without them TIOCSWINSZ fails with EINVAL and the child gets no termios.
+// This mirrors what openpty(3C) does there, and skips the push when autopush
+// has already set the stream up.
+#[cfg(any(target_os = "illumos", target_os = "solaris"))]
+fn push_streams_modules(fd: &std::os::fd::OwnedFd) -> std::io::Result<()> {
+    let fd = fd.as_raw_fd();
+    // Safety: fd is an open descriptor and each module name is a
+    // NUL-terminated string that outlives the call.
+    let present = unsafe { libc::ioctl(fd, libc::I_FIND, c"ldterm".as_ptr()) };
+    if present < 0 {
+        return Err(std::io::Error::last_os_error());
+    }
+    if present == 0 {
+        for module in [c"ptem", c"ldterm", c"ttcompat"] {
+            // Safety: as above.
+            // __I_PUSH_NOCTTY rather than I_PUSH: pushing ldterm makes the
+            // stream a tty, and a session leader with no controlling
+            // terminal (a daemon) would otherwise acquire it as one.
+            if unsafe {
+                libc::ioctl(fd, libc::__I_PUSH_NOCTTY, module.as_ptr())
+            } < 0
+            {
+                return Err(std::io::Error::last_os_error());
+            }
+        }
+    }
+    Ok(())
 }
 
 pub struct Pts(std::os::fd::OwnedFd);

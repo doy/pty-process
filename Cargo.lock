@@ -226,6 +226,7 @@ name = "pty-process"
 version = "0.5.4"
 dependencies = [
  "futures",
+ "libc",
  "nix",
  "regex",
  "rustix",
